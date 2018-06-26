@@ -397,7 +397,7 @@ void USART2_IRQHandler(void)
 #endif
 //
 
-//串口3 DMA方式发送中断  
+//串口1 DMA方式接收满中断
 void DMA1_Channel6_IRQHandler(void)  
 {  
 #if SYSTEM_SUPPORT_OS 		//如果SYSTEM_SUPPORT_OS为真，则需要支持OS.

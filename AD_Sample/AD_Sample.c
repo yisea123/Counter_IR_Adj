@@ -269,15 +269,16 @@ void calibrate_IR (void)
 {
 	int i;
 	uint16_t timeout = 0;
-	uint16_t value_updated = 0;
+	uint16_t value_updated;
 //#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
 //    OS_CPU_SR  cpu_sr = 0u;
 //#endif
 //	OS_ENTER_CRITICAL();
 	
-	while (1){
-		value_updated = 0;
-		for(i = 0; i < 12; i++){
+	for(i = 0; i < 12; i++){
+		value_updated = 1;
+		while (value_updated){//每个通道单独调压
+			value_updated = 0;
 			if (After_filter[i] < STD_REF_VALUE_L){
 				if (g_counter.view_IR_DA_value[i] < 255){
 					g_counter.view_IR_DA_value[i]++;
@@ -292,16 +293,19 @@ void calibrate_IR (void)
 			if (send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]) == 0){
 				timeout++;
 			}
-			if (value_updated == 0){//调整完毕
+			if (timeout >= 2){
+				my_println ("AD8804 Adjust Error");
 				break;
 			}
 		}
-		if (timeout >= 12){
-			my_println ("AD8804 Error");
+		if (timeout >= 2){
 			break;
 		}
 	}
 	if (timeout == 0){//没有错误可以保存
+		my_println ("AD8804 Adjust finish");
+		send_ad8804_cmd_str ("set led2 1");
+		send_ad8804_cmd_str ("set led3 1");
 		save_para (2);//强制保存
 	}
 //	OS_EXIT_CRITICAL();
