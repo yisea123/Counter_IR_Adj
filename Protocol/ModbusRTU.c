@@ -266,6 +266,12 @@ void Modbus_RegMap(void)
 	for (i = 0; i < 12; i++){
 		MAP_MODBUS_HOLDREG(512 + i, g_counter.set_door_n_close_delay[i]);
 	}
+	for (i = 0; i < 12; i++){
+		MAP_MODBUS_HOLDREG(524 + i, g_counter.view_IR_DA_value[i]);
+	}
+	
+	MAP_MODBUS_HOLDREG(536, g_counter.std_ref_value_old);
+	MAP_MODBUS_HOLDREG(537, g_counter.std_ref_value);
 
 	save_para (0); //save_para(1) 保存参数save_para(0) 读取参数
 	Modbus_HoldReg_NULL = 0;
@@ -316,7 +322,7 @@ int save_para (int flag)
 		}
 	}
 //check reg info*****************************************************************************
-	if (flag == 1){//保存参数
+	if (flag > 0){//保存参数
 		for (i = 0; i < MODBUS_SAVE_DATA_NUM; i++){
 			spi_flash_info->SAVE_DATA[i] = *Modbus_HoldReg[MODBUS_SAVE_DATA_START + i];
 		}
@@ -381,7 +387,14 @@ void check_data (void)
 		}else{
 			g_counter.set_door_n_close_delay[i] = g_counter.set_door_close_delay;
 		}
+		if (g_counter.std_ref_value != g_counter.std_ref_value_old){
+			g_counter.view_IR_DA_value[i] = 100;
+		}
+		if (g_counter.view_IR_DA_value[i] > 255){
+			g_counter.view_IR_DA_value[i] = 100;
+		}
 	}
+	g_counter.std_ref_value_old = g_counter.std_ref_value;
 	DATA_RANGE_CHECK ();
 }
 
@@ -687,8 +700,7 @@ void Modbus_06_Handle(u8 * _data_buf)
 		check_data ();
 		if (((startRegAddr < MODBUS_SAVE_DATA_START + MODBUS_SAVE_DATA_NUM + 1) && (startRegAddr >= MODBUS_SAVE_DATA_START)) ||
 			  ((startRegAddr < MODBUS_SAVE_DATA_START_EX + MODBUS_SAVE_DATA_NUM_EX + 1) && (startRegAddr >= MODBUS_SAVE_DATA_START_EX))
-			 )
-		{
+			 ){
 			data_change_flag = 1;
 			save_para (1); //save_para(1) 保存参数save_para(0) 读取参数
 		}
@@ -765,12 +777,10 @@ void Modbus_16_Handle(u8 * _data_buf)
 	RegNum= (((u16)_data_buf[4])<<8)|_data_buf[5];//获取寄存器数量
 	if((startRegAddr+RegNum - 1)<MODBUS_REG_NUM)//寄存器地址+数量在范围内
 	{
-		for(i=0;i<RegNum;i++)
-		{
+		for(i=0;i<RegNum;i++){
 			*Modbus_HoldReg[startRegAddr+i]=((u16)_data_buf[7+i*2])<<8; //高字节在前
 			*Modbus_HoldReg[startRegAddr+i]|=_data_buf[8+i*2]; //低字节在后
-			if ((startRegAddr+i < MODBUS_SAVE_DATA_START + MODBUS_SAVE_DATA_NUM + 1) && (startRegAddr+i >= MODBUS_SAVE_DATA_START))
-			{
+			if ((startRegAddr+i < MODBUS_SAVE_DATA_START + MODBUS_SAVE_DATA_NUM + 1) && (startRegAddr+i >= MODBUS_SAVE_DATA_START)){
 				data_change_flag = 1;
 			}
 		}

@@ -18,6 +18,9 @@ enum
 	TTY_MODBUS
 };
 
+#define AD_8804_TIMEOUT (200)
+#define AD_8804_RETRY_TIME (3)
+
 /*
  * Monitor Command Table
  */
@@ -78,8 +81,8 @@ typedef struct
        
 typedef struct 
 {  
-	unsigned char rec_buf[CMD_BUF_LEN];            //接收命令缓冲区  
-	unsigned char emitter_cmd[CMD_BUF_LEN];      //发射板接收命令缓冲区  
+	char rec_buf[CMD_BUF_LEN];            //接收命令缓冲区  
+	char emitter_cmd[CMD_BUF_LEN];      //发射板接收命令缓冲区  
 	int32_t cmd_arg[ARG_NUM];             //保存命令的参数  
 }cmd_analyze_struct;  
 
@@ -94,6 +97,8 @@ typedef struct
 	S16 uart0_cmd_flag;
 	U16 system_runing;
 	U16 modbus_rtu_addr;
+	vu32 ad_8804_cmd_timeout;
+	vu32 ad_8804_res_ok;
 	U32 is_registered;
 }s_system_env;
 
@@ -116,12 +121,14 @@ void fill_rec_buf(char data);
 void vTaskCmdAnalyze( void );
 u32 GetLockCode(char *id);
 
+int send_ad8804_cmd_str (char *cmd_str);
+int send_ad8804_ch_value (uint8_t ch, uint16_t value);
+
 int run_command (const char *cmd, int flag);
 int cmd_usage(cmd_tbl_t *cmdtp);
 
 cmd_tbl_t *find_cmd (const char *cmd);
 
-S16 is_repeate (S16 _coin_index);//  判别 是不是重币的函数
 
 
 

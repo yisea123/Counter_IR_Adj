@@ -3,7 +3,7 @@
 
 s_counter_info g_counter;
 
-U16 process_rdy = 0;
+vu16 process_rdy = PROCESS_RDY;
 typedef struct {
 	vu16 AD_Value_0[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
 	vu16 AD_Value_1[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
@@ -264,6 +264,49 @@ void ADC1_Configuration(void)
 	while(ADC_GetCalibrationStatus(ADC1)); //获取指定ADC1的校准程序,设置状态则等待
 }
 
+
+void calibrate_IR (void)
+{
+	int i;
+	uint16_t timeout = 0;
+	uint16_t value_updated = 0;
+//#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
+//    OS_CPU_SR  cpu_sr = 0u;
+//#endif
+//	OS_ENTER_CRITICAL();
+	
+	while (1){
+		value_updated = 0;
+		for(i = 0; i < 12; i++){
+			if (After_filter[i] < STD_REF_VALUE_L){
+				if (g_counter.view_IR_DA_value[i] < 255){
+					g_counter.view_IR_DA_value[i]++;
+					value_updated++;
+				}
+			}else if (After_filter[i] > STD_REF_VALUE_H){
+				if (g_counter.view_IR_DA_value[i] > 0){
+					g_counter.view_IR_DA_value[i]--;
+					value_updated++;
+				}
+			}
+			if (send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]) == 0){
+				timeout++;
+			}
+			if (value_updated == 0){//调整完毕
+				break;
+			}
+		}
+		if (timeout >= 12){
+			my_println ("AD8804 Error");
+			break;
+		}
+	}
+	if (timeout == 0){//没有错误可以保存
+		save_para (2);//强制保存
+	}
+//	OS_EXIT_CRITICAL();
+}
+
 void re_calibration_detect (void)
 {
 	int i;
@@ -507,33 +550,6 @@ int save_detect_data (U16 _ch, U16 * _index, U16 _ad_value)
 	return 0;
 }
 
-#define CASE_CH(CH) case CH: if (DOOR_##CH == 1){ \
-	if (g_counter.set_door_n_close_delay[CH] == 0){ \
-		DOOR_##CH = 0; \
-	}else if ((_ch->door_close_delay == 0) && (DOOR_##CH == 1)){/*如果door_close_delay等于0，说明此刻没有在计时*/ \
-		_ch->door_close_delay = g_counter.set_door_n_close_delay[CH];/*小料门关闭延时*/ \
-	} \
-	_ch->close_interval.data_hl = _ch->interval.data_hl; \
-	if (_ch->close_interval.data_hl < g_counter.set_min_interval.data_hl){/*小料门关闭时药粒间隔太小*/  \
-		REJECT_FLAG = 0; \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_CLOSE; \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE; \
-		g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/ \
-	} \
-	if (_ch->close_interval.data_hl > _ch->max_close_interval.data_hl){ \
-		_ch->max_close_interval.data_hl = _ch->close_interval.data_hl; \
-		if (_ch->max_close_interval.data_hl > g_counter.max_close_interval.data_hl){ \
-			g_counter.max_close_interval.data_hl = _ch->max_close_interval.data_hl; \
-		} \
-	} \
-	if (_ch->close_interval.data_hl < _ch->min_close_interval.data_hl){ \
-		_ch->min_close_interval.data_hl = _ch->close_interval.data_hl; \
-		if (_ch->min_close_interval.data_hl < g_counter.min_close_interval.data_hl){ \
-			g_counter.min_close_interval.data_hl = _ch->min_close_interval.data_hl; \
-		} \
-	} \
-} \
-break
 
 
 int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)

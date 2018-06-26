@@ -4,7 +4,7 @@
 cmd_analyze_struct cmd_analyze; 
 
 int do_help (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
-void print_da_all (void);
+void print_ad_all (void);
 
 /*√¸¡Ó±Ì*/  
 
@@ -462,7 +462,7 @@ void print_system_env_info (void)
 	my_println("----------------------------------------------------");        
 }  
 
-void print_da_all (void)
+void print_ad_all (void)
 {
 	#define DA_ALL_ROLL_N 6
 	u16 i;
@@ -472,11 +472,9 @@ void print_da_all (void)
 	my_println ("-------------live all da value------------");
 	my_println ("------------------------------------------");
 	my_env.roll_count = 0;
-	while (1)
-	{
+	while (1){
 		Rollback ();
-		for(i=0;i<12;i++)
-		{
+		for(i=0;i<12;i++){
 			//value[i]= GetVolt(After_filter[i]);
 			my_print ("%02d:%05d  ", i, After_filter[i]);
 			if ((i + 1) % 4 == 0)
@@ -832,11 +830,9 @@ int do_print (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			cmd_usage (cmdtp);
 			break;
 		case 3:
-			if (strcmp (argv[1], "ad") == 0)
-			{
-				if (strcmp (argv[2], "all") == 0)
-				{
-					print_da_all ();
+			if (strcmp (argv[1], "ad") == 0){
+				if (strcmp (argv[2], "all") == 0){
+					print_ad_all ();
 					break;
 				}
 			}else if (strcmp (argv[1], "env") == 0){
@@ -856,9 +852,45 @@ int do_print (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 MY_CMD(
 	print,	3,	1,	do_print,
 	"print - print info of the arg\n",
-	"print da 2\nprint da all\n"
+	"print ad 2\nprint ad all\n"
 );
 
+
+int send_ad8804_cmd_str (char *cmd_str)
+{
+	int32_t re_code;
+	uint8_t err;
+	uint8_t retry_time = AD_8804_RETRY_TIME;
+	char str_tmp[64];
+	
+	sprintf (str_tmp, "%s\r\n", cmd_str);
+	while (retry_time--){
+		uart2_puts(str_tmp);
+		re_code = (u32)OSQPend(ad8804_msg, AD_8804_TIMEOUT, &err);
+		if (err == OS_ERR_NONE){
+			if (re_code == 0xaa){
+				//my_println ("AD8804 Response OK");
+				break;
+			}
+		}else if (err == OS_ERR_TIMEOUT){
+			//my_println ("AD8804 Timeout %d", re_code);
+		}
+	}
+	return re_code;
+}
+
+int send_ad8804_cmd (char *argv[])
+{
+	char str_tmp[64];
+	sprintf (str_tmp, "set da %s %s", argv[2], argv[3]);
+	return (send_ad8804_cmd_str(str_tmp));
+}
+int send_ad8804_ch_value (uint8_t ch, uint16_t value)
+{
+	char str_tmp[64];
+	sprintf (str_tmp, "set da %d %d", ch, value);
+	return (send_ad8804_cmd_str(str_tmp));
+}
 int do_set (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {	
 	U16 data_temp;
@@ -906,6 +938,12 @@ int do_set (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 				break;
 			}
 			cmd_usage (cmdtp);
+			break;
+		case 4:
+			if (strcmp (argv[1], "da") == 0){
+				send_ad8804_cmd (argv);
+				break;
+			}
 			break;
 		default: cmd_usage (cmdtp);break;
 	}

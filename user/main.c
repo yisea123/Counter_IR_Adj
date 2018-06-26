@@ -31,7 +31,10 @@ OS_STK CMD_TASK_STK[CMD_STK_SIZE];
 //任务函数 
 void cmd_task(void *pdata); 
 
-
+//ad8804 msg
+#define AD8804_MSG_SIZE 1
+OS_EVENT * ad8804_msg;			//串口消息队列
+void * ad8804MsgGrp[AD8804_MSG_SIZE];			//消息队列存储地址,最大支持1个消息
  
 
 //DEBUG 任务 
@@ -116,7 +119,6 @@ int main (void)
 	uart2_init ();
 	uart3_init ();
 	
-	uart2_puts ("hello usart 2\r\n");
 	my_println ();
 	my_println ("*****************************************************************");
 	my_println ("                      Compile Time Info                     ");     
@@ -165,7 +167,7 @@ int main (void)
 	cmd ();
 	OSInit(); //UCOS 初始化 
 	OSTaskCreate(start_task, (void*)0,(OS_STK*)&START_TASK_STK[START_STK_SIZE-1], START_TASK_PRIO); //创建开始任务 
-    OSTaskNameSet(START_TASK_PRIO, (INT8U *)(void *)"start_task", &err);
+	OSTaskNameSet(START_TASK_PRIO, (INT8U *)(void *)"start_task", &err);
 	OSStart(); //开始任务 
 	
 }
@@ -192,22 +194,24 @@ void start_task(void *pdata)
 	debug_msg=OSQCreate(&debugMsgGrp[0], CMD_MSG_SIZE);	//创建消息队列
 	//创建modbusRTU消息队列
 	modbusRTU_msg=OSQCreate(&modbusRTUMsgGrp[0], MODBUSRTU_MSG_SIZE);	//创建消息队列
+	//创建ad8804消息队列
+	ad8804_msg=OSQCreate(&ad8804MsgGrp[0], AD8804_MSG_SIZE);	//创建消息队列
 	
 	//创建CMD 任务 
 	OSTaskCreate(cmd_task,(void*)0,(OS_STK*)&CMD_TASK_STK[CMD_STK_SIZE-1],CMD_TASK_PRIO); 
-    OSTaskNameSet(CMD_TASK_PRIO, (INT8U *)(void *)"cmd_task", &err);
+	OSTaskNameSet(CMD_TASK_PRIO, (INT8U *)(void *)"cmd_task", &err);
 	//创建LED1 任务 
 	OSTaskCreate(led1_task,(void*)0,(OS_STK*)&LED1_TASK_STK[LED1_STK_SIZE-1],LED1_TASK_PRIO); 
-    OSTaskNameSet(LED1_TASK_PRIO, (INT8U *)(void *)"led1_task", &err);
+	OSTaskNameSet(LED1_TASK_PRIO, (INT8U *)(void *)"led1_task", &err);
 	//创建IO 处理任务 
 	OSTaskCreate(io_task,(void*)0,(OS_STK*)&IO_TASK_STK[IO_STK_SIZE-1],IO_TASK_PRIO); 
-    OSTaskNameSet(IO_TASK_PRIO, (INT8U *)(void *)"io_task", &err);
+	OSTaskNameSet(IO_TASK_PRIO, (INT8U *)(void *)"io_task", &err);
 	//创建测试任务 
 	OSTaskCreate(debug_task,(void*)0,(OS_STK*)&DEBUG_TASK_STK[DEBUG_STK_SIZE-1],DEBUG_TASK_PRIO);
-    OSTaskNameSet(DEBUG_TASK_PRIO, (INT8U *)(void *)"debug_task", &err);
+	OSTaskNameSet(DEBUG_TASK_PRIO, (INT8U *)(void *)"debug_task", &err);
 	//创建ModbusRTU任务 
 	OSTaskCreate(modbusRTU_msg_task,(void*)0,(OS_STK*)&MODBUSRTU_TASK_STK[MODBUSRTU_STK_SIZE-1],MODBUSRTU_TASK_PRIO);
-    OSTaskNameSet(MODBUSRTU_TASK_PRIO, (INT8U *)(void *)"modbusRTU_task", &err);
+	OSTaskNameSet(MODBUSRTU_TASK_PRIO, (INT8U *)(void *)"modbusRTU_task", &err);
 	
 	TIM2_Int_Init (TIM2_ARR, TIM2_PSC); //0.05ms
 	TIM3_PWM_Init (TIM3_ARR, TIM3_PSC); //1ms
@@ -228,8 +232,7 @@ void start_task(void *pdata)
 	//OSTaskSuspend(START_TASK_PRIO);//挂起开始任务 
 	OS_EXIT_CRITICAL(); //退出临界区(开中断) 
 		
-	if ( OSTaskDel(OS_PRIO_SELF) != OS_ERR_NONE)			
-	{
+	if ( OSTaskDel(OS_PRIO_SELF) != OS_ERR_NONE){
 		my_println ("delete handle_task failed");
 		OSTaskSuspend(START_TASK_PRIO);//删除失败，挂起开始任务 
 	}	
@@ -322,9 +325,29 @@ void cmd_task(void *pdata)
 					TIM_Cmd(TIM7,ENABLE);//开始计时
 				}
 			}
-		}else if (msg == 0xaa){
-			uart2_rec_count = CMD_BUF_LEN - DMA_GetCurrDataCounter(DMA1_Channel6);
-			my_println ("uart 2 receive: %s", cmd_analyze.emitter_cmd);
+		}else if (msg == 0xaa){			
+			uart2_rec_count = CMD_BUF_LEN - DMA_GetCurrDataCounter(DMA1_Channel6);			
+			if ((cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0d) || 
+					((cmd_analyze.emitter_cmd[uart2_rec_count-2] == 0x0d) && (cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0a))){
+				if ((cmd_analyze.emitter_cmd[uart2_rec_count-2] == 0x0d) && (cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0a)){
+					cmd_analyze.emitter_cmd[uart2_rec_count-2] = 0;
+				}
+				cmd_analyze.emitter_cmd[uart2_rec_count-1] = 0;
+				//my_println ("%s", cmd_analyze.emitter_cmd);
+				
+				OSQPost(ad8804_msg, (void *) 0xaa);//
+				start_uart2_receive ();
+			}
+		}else if (msg == 0xab){
+			uart2_rec_count = CMD_BUF_LEN - DMA_GetCurrDataCounter(DMA1_Channel6);			
+			if ((cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0d) || 
+					((cmd_analyze.emitter_cmd[uart2_rec_count-2] == 0x0d) && (cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0a))){
+				if ((cmd_analyze.emitter_cmd[uart2_rec_count-2] == 0x0d) && (cmd_analyze.emitter_cmd[uart2_rec_count-1] == 0x0a)){
+					cmd_analyze.emitter_cmd[uart2_rec_count-2] = 0;
+				}
+				cmd_analyze.emitter_cmd[uart2_rec_count-1] = 0;
+				my_println ("%s", cmd_analyze.emitter_cmd);
+			}
 			start_uart2_receive ();
 		}
 	}
@@ -473,6 +496,8 @@ void led1_task(void *pdata)
 void debug_task(void *pdata) 
 { 
 	u8 err;	
+	calibrate_IR ();
+	re_calibration_detect();
 	while (1)
 	{
 		if ((u32)OSQPend(debug_msg, 0, &err) == 0x55){

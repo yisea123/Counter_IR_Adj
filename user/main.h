@@ -104,6 +104,7 @@ extern OS_EVENT * cmd_msg;			//串口消息队列
 extern OS_EVENT * debug_msg;			//串口消息队列
 extern OS_EVENT * io_msg;			//IO消息队列
 extern OS_EVENT * modbusRTU_msg;			//串口消息队列
+extern OS_EVENT * ad8804_msg;			//IO消息队列
 
 
 extern FATFS *fs[_VOLUMES];  
@@ -158,6 +159,8 @@ extern FATFS *fs[_VOLUMES];
 #define UART1_RX_INT_SUB 3
 #define UART2_RX_INT_PREEM INT_GROUP_2
 #define UART2_RX_INT_SUB 3
+#define DMA1_6_INT_PREEM INT_GROUP_2
+#define DMA1_6_INT_SUB 3
 
 //GROUP 3***************************
 #define INT_GROUP_3 3

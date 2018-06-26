@@ -12,14 +12,11 @@
 #define WAVE_UP 	g_counter.set_wave_up_flag //16
 #define WAVE_UP_V 	g_counter.set_wave_up_value //10
 
-
-#define STD_VALUE 31000
-//#define STD_DOWN_V_OFFSET g_counter.set_std_down_v_offset
-//#define STD_UP_V_OFFSET g_counter.set_std_up_v_offset
+#define STD_REF_VALUE (28100)
+#define STD_REF_VALUE_L (STD_REF_VALUE - 100)
+#define STD_REF_VALUE_H (STD_REF_VALUE + 100)
 #define STD_DOWN_V_OFFSET g_counter.ch[i].std_down_offset
 #define STD_UP_V_OFFSET g_counter.ch[i].std_up_offset
-//#define STD_DOWN_V (STD_VALUE - STD_DOWN_V_OFFSET)
-//#define STD_UP_V (STD_VALUE - STD_UP_V_OFFSET)
 
 #define AD_MAX_V 4096 * 8
 
@@ -252,10 +249,14 @@ typedef struct
 	U16 sim_ad_value;
 	U16 sim_flag;
 	U16 set_door_n_close_delay[CHANEL_NUM];
+	U16 view_IR_DA_value[CHANEL_NUM];
+	U16 std_ref_value_old;
+	U16 std_ref_value;
 }s_counter_info;
 
 void AD_filter(U16 _detect_chanel_index, U16 _chanel_pos_index);
 int AD_Sample_init (void);
+void calibrate_IR (void);
 void re_calibration_detect (void);
 u16 GetVolt(u16 advalue);
 extern u16 After_filter[CHANEL_NUM]; //用来存放求平均值之后的结果
@@ -277,7 +278,7 @@ extern s_counter_info g_counter;
 extern s_buf AD_buff;
 
 
-extern U16 process_rdy;
+extern vu16 process_rdy;
 extern u16 wave_down_flag;
 extern u16 wave_up_flag;
 extern u16 wave_up_value;

@@ -263,44 +263,53 @@ void USART1_IRQHandler(void)
 void uart2_dma_config (void)
 {
 	DMA_InitTypeDef DMA_InitStructure;
-//	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitTypeDef NVIC_InitStructure;
 	
 	//---------------------串口功能配置---------------------   
 	
 	//串口收DMA配置    
-    //启动DMA时钟  
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);  
-    //DMA1通道5配置  
-    DMA_DeInit(DMA1_Channel6);  
-    //外设地址  
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (u32)(&USART2->DR);  
-    //内存地址  
-    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)cmd_analyze.emitter_cmd;  
-    //dma传输方向单向  
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;  
-    //设置DMA在传输时缓冲区的长度  
-    DMA_InitStructure.DMA_BufferSize = CMD_BUF_LEN;  
-    //设置DMA的外设递增模式，一个外设  
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;  
-    //设置DMA的内存递增模式  
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;  
-    //外设数据字长  
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;  
-    //内存数据字长  
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;  
-    //设置DMA的传输模式  
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;  
-    //设置DMA的优先级别  
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;  
-    //设置DMA的2个memory中的变量互相访问  
-    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;  
-    DMA_Init(DMA1_Channel6,&DMA_InitStructure);  
-    //使能通道5  
-    DMA_Cmd(DMA1_Channel6,ENABLE);  
-    //采用DMA方式接收  
-    USART_DMACmd(USART2,USART_DMAReq_Rx,ENABLE);  
+	//启动DMA时钟  
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);  
+	//DMA1通道5配置  
+	DMA_DeInit(DMA1_Channel6);  
+	//外设地址  
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (u32)(&USART2->DR);  
+	//内存地址  
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)cmd_analyze.emitter_cmd;  
+	//dma传输方向单向  
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;  
+	//设置DMA在传输时缓冲区的长度  
+	DMA_InitStructure.DMA_BufferSize = CMD_BUF_LEN;  
+	//设置DMA的外设递增模式，一个外设  
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;  
+	//设置DMA的内存递增模式  
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;  
+	//外设数据字长  
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;  
+	//内存数据字长  
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;  
+	//设置DMA的传输模式  
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;  
+	//设置DMA的优先级别  
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;  
+	//设置DMA的2个memory中的变量互相访问  
+	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;  
+	DMA_Init(DMA1_Channel6,&DMA_InitStructure); 
+		
+	DMA_ITConfig(DMA1_Channel6, DMA_IT_TC, ENABLE); //传输结束中断
+
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = DMA1_6_INT_PREEM;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = DMA1_6_INT_SUB;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+	NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel6_IRQn;
+	NVIC_Init(&NVIC_InitStructure);
+	//使能通道5  
+	DMA_Cmd(DMA1_Channel6,ENABLE);  
+	//采用DMA方式接收  
+	USART_DMACmd(USART2,USART_DMAReq_Rx,ENABLE);  
 }
-//串口1 DMA方式发送中断  
+//串口2 DMA方式发送中断  
 void stop_uart2_receive (void)
 {
 	DMA_Cmd(DMA1_Channel6,DISABLE);
@@ -386,6 +395,24 @@ void USART2_IRQHandler(void)
 } 
 //} 
 #endif
+//
+
+//串口3 DMA方式发送中断  
+void DMA1_Channel6_IRQHandler(void)  
+{  
+#if SYSTEM_SUPPORT_OS 		//如果SYSTEM_SUPPORT_OS为真，则需要支持OS.
+	OSIntEnter();    
+#endif
+	if(DMA_GetITStatus(DMA1_IT_TC6)){
+		//清除标志位  
+		DMA_ClearFlag(DMA1_FLAG_TC6);//清除通道4传输完成标志
+		DMA_ClearITPendingBit(DMA1_IT_GL6); //清除全部中断标志 
+		OSQPost(cmd_msg, (void *) 0xab);//发送消息
+	}
+#if SYSTEM_SUPPORT_OS 	//如果SYSTEM_SUPPORT_OS为真，则需要支持OS.
+	OSIntExit();  											 
+#endif
+}
 //
 
 

@@ -60,19 +60,7 @@ u16 tim2_irq_process_time = 0;
 uint32_t sys_run_time	= 0;//100us的精度
 void TIM2_IRQHandler(void)   //TIM2中断
 {
-//	uint32_t temp;
 	unsigned long long tick_old;
-//	if (sys_run_time > 0){
-//		sys_run_time--;
-//	}
-//	if (g_counter.complete_count > 0){
-//		g_counter.complete_count--;
-//	}
-//		temp = sys_run_time;
-//	while (!temp)
-//	{
-//		temp = sys_run_time;
-//	}
 	tick_old = get_tim5_ticks();
 ///////////////////////////////////////////////////////////////////////////////////////////
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) //检查指定的TIM中断发生与否:TIM 中断源 
@@ -166,18 +154,11 @@ void TIM3_IRQHandler(void)   //TIM3中断
  	static u16 led0pwmval=0;
 	static u16 delay = 0;
 	static u16 tim3_count = 0;
-	if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET) //检查指定的TIM中断发生与否:TIM 中断源 
-	{
+	if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET){ //检查指定的TIM中断发生与否:TIM 中断源 
+	
 		TIM_ClearITPendingBit(TIM3, TIM_IT_Update  );  //清除TIMx的中断待处理位:TIM 中断源 
 		delay++;
-		if (delay ==  (5 * (TIM3_ARR + 1) / PMW_WIDTH )) //1ms
-		{
-//			if(dir)led0pwmval++;
-//			else led0pwmval--;
-
-//			if(led0pwmval==PMW_WIDTH)dir=0;
-//			if(led0pwmval==0)dir=1;										 
-//			TIM_SetCompare2(TIM3,led0pwmval);	
+		if (delay ==  (5 * (TIM3_ARR + 1) / PMW_WIDTH )){ //1ms	
 			delay = 0;
 			TIM_SetCompare2(TIM3, indexWave[led0pwmval++]);
 			if( led0pwmval >=  41){
@@ -204,10 +185,10 @@ void TIM3_IRQHandler(void)   //TIM3中断
 			}
 			check_data ();
 			tim3_count = 0;
-//			if (!VIBRATE_SWITCH){
-//				TIM_Cmd(TIM6, ENABLE);  //使能TIMx外设		
-//			}
 		////////////////////////////////////////////////////////////////////////
+		}
+		if (my_env.ad_8804_cmd_timeout > 0){
+			my_env.ad_8804_cmd_timeout--;
 		}
 /////////////////////////////////////////////////////////////////////////////////		
 	}
@@ -265,22 +246,13 @@ void TIM4_PWM_Init(u16 arr,u16 psc)
 //定时器4中断服务程序
 void TIM4_IRQHandler(void)   //TIM4中断
 {
-	//static u8 dir=1;
  	static u16 led0pwmval=0;
 	static u16 delay = 0;
 	
-	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) //检查指定的TIM中断发生与否:TIM 中断源 
-	{
+	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET){ //检查指定的TIM中断发生与否:TIM 中断源 
 		TIM_ClearITPendingBit(TIM4, TIM_IT_Update  );  //清除TIMx的中断待处理位:TIM 中断源 
 		delay++;
-		if (delay == (4 * (TIM4_ARR + 1) / PMW_WIDTH)) //2ms
-		{
-//			if(dir)led0pwmval++;
-//			else led0pwmval--;
-
-//			if(led0pwmval==PMW_WIDTH)dir=0;
-//			if(led0pwmval==0)dir=1;										 
-//			TIM_SetCompare4(TIM4,led0pwmval);	
+		if (delay == (4 * (TIM4_ARR + 1) / PMW_WIDTH)){ //2ms
 			delay = 0;
 			TIM_SetCompare4(TIM4, indexWave[led0pwmval++]);
 			if( led0pwmval >=  41){
