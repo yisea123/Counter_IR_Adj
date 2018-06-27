@@ -5,6 +5,7 @@
 #define CHANEL_NUM 12 //为12个通道
 #define CHANEL_SENSOR_NUM 8
 
+#define START_DATA 5
 #define PROCESS_RDY 15
 
 
@@ -179,7 +180,7 @@ typedef struct{
 	U16 sample_size;
 	U16 state;
 	U16 door_close_delay;
-	U32 ad_averaged_value;
+	S32 ad_averaged_value;
 	U16 ad_fitter_buff[AD_FITTER_BUFF_SIZE];
 	U16 ad_fitter_index;
 	uint32_t area_sum_buf;//截面积
@@ -217,8 +218,8 @@ typedef struct{
 	U32 buf_addr;
 	u16 (* AD_buf_p)[CHANEL_NUM];
 	U16 counter_step;
-	U16 set_std_up_v_offset;
-	U16 set_std_down_v_offset;
+	U16 set_std_denumerator;
+	U16 set_std_numerator;
 	U16 set_wave_down_flag;
 	U16 set_wave_up_flag;
 	U16 set_wave_up_value;

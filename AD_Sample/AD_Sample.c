@@ -20,7 +20,7 @@ s_counter_env counter_env;
 
 void counter_init (void)
 {
-	int i;
+	int i, j;
 	S8 *p = (S8 *) &g_counter;
 	for (i = 0; i < sizeof(s_counter_info); i++)
 	{
@@ -41,6 +41,9 @@ void counter_init (void)
 		g_counter.ch[i].ad_min = 0xFFFF;
 		g_counter.ch[i].ad_max = 0;
 		g_counter.ch[i].ad_averaged_value = 0;
+		for (j = 0; j < AD_FITTER_BUFF_SIZE; j++){
+			g_counter.ch[i].ad_fitter_buff[j] = 0;
+		}
 	}
 
 	g_counter.sim_ad_value = 35000;
@@ -308,7 +311,7 @@ void calibrate_IR (void)
 
 void re_calibration_detect (void)
 {
-	int i;
+	int i, j;
 #if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
@@ -322,6 +325,9 @@ void re_calibration_detect (void)
 		g_counter.ch[i].ad_min = 0xFFFF;
 		g_counter.ch[i].std_v = 0;
 		g_counter.ch[i].ad_averaged_value = 0;
+		for (j = 0; j < AD_FITTER_BUFF_SIZE; j++){
+			g_counter.ch[i].ad_fitter_buff[j] = 0;
+		}
 	}
 	process_rdy = 0;
 	AD_Sample_init ();
@@ -399,14 +405,14 @@ void counter_process (void);
 //输出:无
 //============================================
 
-void Swap(uint16_t A[], uint16_t i, uint16_t j)
+void Swap(uint32_t A[], uint16_t i, uint16_t j)
 {
     uint32_t temp = A[i];
     A[i] = A[j];
     A[j] = temp;
 }
 
-void BubbleSort(uint16_t A[], uint16_t n)
+void BubbleSort(uint32_t A[], uint16_t n)
 {
 	for (uint16_t j = 0; j < n - 1; j++){         // 每次最大元素就像气泡一样"浮"到数组的最后 
 		for (uint16_t i = 0; i < n - 1 - j; i++){ // 依次比较相邻的两个元素,使较大的那个向后移
@@ -417,23 +423,32 @@ void BubbleSort(uint16_t A[], uint16_t n)
 	}
 }
 
-u16 sort_temp[SAMPLE_NUM];
+uint32_t sort_temp[SAMPLE_NUM];
 
-#define MIN_POW_V0 (0.3)
-#define MIN_POW_V1 (0.2)
-#define MIN_POW_V2 (0.15)
-#define MIN_POW_V3 (0.1)
-#define MIN_POW_V4 (0.1)
-#define MIN_POW_V5 (0.05)
-#define MIN_POW_V6 (0.05)
-#define MIN_POW_V7 (0.05)
+//#define MIN_POW_V0 (0.3)
+//#define MIN_POW_V1 (0.2)
+//#define MIN_POW_V2 (0.15)
+//#define MIN_POW_V3 (0.1)
+//#define MIN_POW_V4 (0.1)
+//#define MIN_POW_V5 (0.05)
+//#define MIN_POW_V6 (0.05)
+//#define MIN_POW_V7 (0.05)
+#define MIN_POW_V0 (30)
+#define MIN_POW_V1 (20)
+#define MIN_POW_V2 (15)
+#define MIN_POW_V3 (10)
+#define MIN_POW_V4 (10)
+#define MIN_POW_V5 (5)
+#define MIN_POW_V6 (5)
+#define MIN_POW_V7 (5)
+#define M_POW (100)
 
-uint16_t get_ad_fitter_value (uint16_t AD[])
+uint16_t get_ad_fitter_value (uint32_t AD[])
 {
-	return ((sort_temp[0] * MIN_POW_V0) + (sort_temp[1] * MIN_POW_V1) + 
+	return (((sort_temp[0] * MIN_POW_V0) + (sort_temp[1] * MIN_POW_V1) + 
 					(sort_temp[2] * MIN_POW_V2) + (sort_temp[3] * MIN_POW_V3) +
 					(sort_temp[4] * MIN_POW_V4) + (sort_temp[5] * MIN_POW_V5) +
-					(sort_temp[6] * MIN_POW_V6) + (sort_temp[7] * MIN_POW_V7));
+					(sort_temp[6] * MIN_POW_V6) + (sort_temp[7] * MIN_POW_V7)) / M_POW);
 //	return (sort_temp[0] + sort_temp[1] + 
 //					sort_temp[2] + sort_temp[3] +
 //					sort_temp[4] + sort_temp[5] +
@@ -441,7 +456,7 @@ uint16_t get_ad_fitter_value (uint16_t AD[])
 }
 //backup//////////////////////////////////////////////////////\
 		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
-				BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
+						BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
 		AD[C] /= S;  \
 ///////////////////////////////////////////////////////////////
 #if (SAMPLE_NUM == 8)
@@ -459,15 +474,19 @@ uint16_t get_ad_fitter_value (uint16_t AD[])
 		if (g_counter.ch[C].ad_fitter_index >= AD_FITTER_BUFF_SIZE){ \
 			g_counter.ch[C].ad_fitter_index = 0; \
 		} \
+		g_counter.ch[C].ad_averaged_value += AD[C]; \
 		g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
 		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
-		g_counter.ch[C].ad_averaged_value += AD[C]; \
 		AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
 		g_counter.ch[C].ad_fitter_index++; \
 	}
 
 #endif
 
+	
+//  \
+		
+	
 #define START_DATA 5
 #if (SAMPLE_NUM == 8)
 	#define GET_STD_AD_V(AD,BUF,C,S)  {\
@@ -480,18 +499,17 @@ uint16_t get_ad_fitter_value (uint16_t AD[])
 				g_counter.ch[C].ad_min = AD[C]; \
 			} \
 			if (process_rdy != process_rdy_old) { \
-				g_counter.ch[C].std_v += AD[C] / (PROCESS_RDY - (START_DATA) - 1); \
+				g_counter.ch[C].std_v += AD[C] / (PROCESS_RDY - (START_DATA ) - 1); \
 			}\
 		} \
 		if ((process_rdy + 1) == PROCESS_RDY){ \
-			g_counter.ch[C].ad_fitter_index = 0; \
 			g_counter.ch[C].std_v = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
 			g_counter.ch[C].std_down_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min); \
 			g_counter.ch[C].std_up_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min - 1); \
-			g_counter.ch[C].std_down_offset *= g_counter.set_std_down_v_offset; \
-			g_counter.ch[C].std_up_offset *= g_counter.set_std_down_v_offset; \
-			g_counter.ch[C].std_down_offset /= (g_counter.set_std_up_v_offset); \
-			g_counter.ch[C].std_up_offset /= (g_counter.set_std_up_v_offset); \
+			g_counter.ch[C].std_down_offset *= g_counter.set_std_numerator; \
+			g_counter.ch[C].std_up_offset *= g_counter.set_std_numerator; \
+			g_counter.ch[C].std_down_offset /= (g_counter.set_std_denumerator); \
+			g_counter.ch[C].std_up_offset /= (g_counter.set_std_denumerator); \
 		} \
 	}
 #endif

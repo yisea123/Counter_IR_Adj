@@ -161,8 +161,8 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 9, 	g_counter.set_max_len.data.l);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 10, g_counter.set_min_len.data.h);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 11, g_counter.set_min_len.data.l);
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 12, g_counter.set_std_down_v_offset);
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 13, g_counter.set_std_up_v_offset);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 12, g_counter.set_std_numerator);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 13, g_counter.set_std_denumerator);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 14, g_counter.set_wave_down_flag);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 15, g_counter.set_wave_up_flag);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 16, g_counter.set_wave_up_value);
@@ -397,8 +397,8 @@ int save_para (int flag)
 void check_data (void)
 {
 	int i;
-	if ((g_counter.set_std_down_v_offset < 1) || (g_counter.set_std_down_v_offset > 100)){
-		g_counter.set_std_down_v_offset = 5;
+	if ((g_counter.set_std_numerator < 1) || (g_counter.set_std_numerator > 100)){
+		g_counter.set_std_numerator = 5;
 	}
 	if ((g_counter.set_wave_down_flag < 1) || (g_counter.set_wave_down_flag > 1000)){
 		g_counter.set_wave_down_flag = 8;
@@ -409,12 +409,12 @@ void check_data (void)
 	if ((g_counter.set_wave_up_value < 1) || (g_counter.set_wave_up_value > 1000)){
 		g_counter.set_wave_up_value = 16;
 	}
-	if (g_counter.set_std_up_v_offset < 1){
-		g_counter.set_std_up_v_offset = 1;
+	if (g_counter.set_std_denumerator < 1){
+		g_counter.set_std_denumerator = 1;
 	}
-//	if (g_counter.set_door_close_delay < 1){
-//		g_counter.set_door_close_delay = 1;
-//	}
+	if ((g_counter.set_adc_mode < 1) || (g_counter.set_adc_mode > 7)){
+		g_counter.set_adc_mode = 2;
+	}
 	if (g_counter.set_min_interval.data_hl < 5){
 		g_counter.set_min_interval.data_hl = 5;
 	}
@@ -492,7 +492,7 @@ void modbus_analyze(u8 * _data_buf)
 	if((_data_buf[1]==01)||(_data_buf[1]==02)||(_data_buf[1]==03)||(_data_buf[1]==05)||(_data_buf[1]==06)||(_data_buf[1]==15)||(_data_buf[1]==16))//功能码正确
 	{
 		startRegAddr=(((u16)_data_buf[2])<<8)|_data_buf[3];//获取寄存器起始地址
-		if(startRegAddr < 1000){//寄存器地址在范围内
+		if(startRegAddr < MODBUS_REG_NUM+1){//寄存器地址在范围内
 		#if (MODBUS_RTU_USE_UART == 1)
 			crc = cmd_analyze.rec_buf[ - 2] << 8 | cmd_analyze.rec_buf[ - 1];
 			if (crc == CRC16 (cmd_analyze.rec_buf,  - 2)){//CRC校验正确

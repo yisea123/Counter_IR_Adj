@@ -473,6 +473,7 @@ void led1_task(void *pdata)
 	while(1) 
 	{ 
 		if (my_env.is_registered == REGISTERED){
+			//my_println ("%d", g_counter.ch[0].ad_averaged_value);
 			LED2 = !LED2;
 			delay_ms(100); 
 			if (counter_process_state == 0xE001){
