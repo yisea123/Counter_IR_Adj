@@ -4,11 +4,6 @@
 s_counter_info g_counter;
 
 vu16 process_rdy = PROCESS_RDY;
-typedef struct {
-	vu16 AD_Value_0[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
-	vu16 AD_Value_1[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
-	vu16 AD_Value_2[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
-}s_AD_buf;
 
 s_AD_buf AD_DMA_buf;
 u16 After_filter[CHANEL_NUM]; //用来存放求平均值之后的结果
@@ -317,6 +312,7 @@ void re_calibration_detect (void)
 #if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
+	calibrate_IR ();
 	counter_reset ();
 	OS_ENTER_CRITICAL();
 	COUNT_COMPLETE = 1;
@@ -402,17 +398,80 @@ void counter_process (void);
 //输入:无
 //输出:无
 //============================================
-#define START_DATA 5
-#if (SAMPLE_NUM == 8)
-	#define GET_STD_AD_V(AD,BUF,C,S)  {\
+
+void Swap(uint16_t A[], uint16_t i, uint16_t j)
+{
+    uint32_t temp = A[i];
+    A[i] = A[j];
+    A[j] = temp;
+}
+
+void BubbleSort(uint16_t A[], uint16_t n)
+{
+	for (uint16_t j = 0; j < n - 1; j++){         // 每次最大元素就像气泡一样"浮"到数组的最后 
+		for (uint16_t i = 0; i < n - 1 - j; i++){ // 依次比较相邻的两个元素,使较大的那个向后移
+			if (A[i] > A[i + 1]){            // 如果条件改成A[i] >= A[i + 1],则变为不稳定的排序算法
+				Swap(A, i, i + 1);
+			}
+		}
+	}
+}
+
+u16 sort_temp[SAMPLE_NUM];
+
+#define MIN_POW_V0 (0.3)
+#define MIN_POW_V1 (0.2)
+#define MIN_POW_V2 (0.15)
+#define MIN_POW_V3 (0.1)
+#define MIN_POW_V4 (0.1)
+#define MIN_POW_V5 (0.05)
+#define MIN_POW_V6 (0.05)
+#define MIN_POW_V7 (0.05)
+
+uint16_t get_ad_fitter_value (uint16_t AD[])
+{
+	return ((sort_temp[0] * MIN_POW_V0) + (sort_temp[1] * MIN_POW_V1) + 
+					(sort_temp[2] * MIN_POW_V2) + (sort_temp[3] * MIN_POW_V3) +
+					(sort_temp[4] * MIN_POW_V4) + (sort_temp[5] * MIN_POW_V5) +
+					(sort_temp[6] * MIN_POW_V6) + (sort_temp[7] * MIN_POW_V7));
+//	return (sort_temp[0] + sort_temp[1] + 
+//					sort_temp[2] + sort_temp[3] +
+//					sort_temp[4] + sort_temp[5] +
+//					sort_temp[6] + sort_temp[7]);
+}
+//backup//////////////////////////////////////////////////////\
 		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
 				BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
-		/*AD[C] /= S; */ \
+		AD[C] /= S;  \
+///////////////////////////////////////////////////////////////
+#if (SAMPLE_NUM == 8)
+#define AD_PRE_FITTER(AD,BUF,C,S) { \
+		sort_temp[0] = BUF[0][C]; \
+		sort_temp[1] = BUF[1][C]; \
+		sort_temp[2] = BUF[2][C]; \
+		sort_temp[3] = BUF[3][C]; \
+		sort_temp[4] = BUF[4][C]; \
+		sort_temp[5] = BUF[5][C]; \
+		sort_temp[6] = BUF[6][C]; \
+		sort_temp[7] = BUF[7][C]; \
+		BubbleSort (sort_temp, SAMPLE_NUM); \
+		AD[C] = get_ad_fitter_value (sort_temp); \
 		if (g_counter.ch[C].ad_fitter_index >= AD_FITTER_BUFF_SIZE){ \
 			g_counter.ch[C].ad_fitter_index = 0; \
 		} \
+		g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
 		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
+		g_counter.ch[C].ad_averaged_value += AD[C]; \
+		AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
 		g_counter.ch[C].ad_fitter_index++; \
+	}
+
+#endif
+
+#define START_DATA 5
+#if (SAMPLE_NUM == 8)
+	#define GET_STD_AD_V(AD,BUF,C,S)  {\
+		AD_PRE_FITTER (AD,BUF,C,S) \
 		if (process_rdy > START_DATA){ \
 			if (AD[C] > g_counter.ch[C].ad_max){ \
 				g_counter.ch[C].ad_max = AD[C]; \
@@ -421,15 +480,10 @@ void counter_process (void);
 				g_counter.ch[C].ad_min = AD[C]; \
 			} \
 			if (process_rdy != process_rdy_old) { \
-				g_counter.ch[C].std_v += AD[C] / (PROCESS_RDY - 1 - (START_DATA + 1)); \
+				g_counter.ch[C].std_v += AD[C] / (PROCESS_RDY - (START_DATA) - 1); \
 			}\
 		} \
 		if ((process_rdy + 1) == PROCESS_RDY){ \
-			for (g_counter.ch[C].ad_fitter_index = 0; \
-					g_counter.ch[C].ad_fitter_index < AD_FITTER_BUFF_SIZE; \
-					g_counter.ch[C].ad_fitter_index++){ \
-				g_counter.ch[C].ad_averaged_value += g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
-			} \
 			g_counter.ch[C].ad_fitter_index = 0; \
 			g_counter.ch[C].std_v = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
 			g_counter.ch[C].std_down_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min); \
@@ -444,17 +498,7 @@ void counter_process (void);
 
 #if (SAMPLE_NUM == 8)
 	#define AD_FILTER(AD,BUF,C,S) {\
-		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
-				BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
-		 /*AD[C] /= S; */\
-		if (g_counter.ch[C].ad_fitter_index >= AD_FITTER_BUFF_SIZE){ \
-			g_counter.ch[C].ad_fitter_index = 0; \
-		} \
-		g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
-		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
-		g_counter.ch[C].ad_averaged_value += AD[C]; \
-		AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
-		g_counter.ch[C].ad_fitter_index++; \
+		AD_PRE_FITTER (AD,BUF,C,S) \
 		if (AD[C] > g_counter.ch[C].ad_max){ \
 			g_counter.ch[C].ad_max = AD[C]; \
 		} \
@@ -495,7 +539,11 @@ void start_vibrate (void)
 		g_counter.counter_state = NORMAL_COUNT;
 		PRE_COUNT_FLAG = 1;
 		VIBRATE_SWITCH = 0;
-	}else{//多数或者刚好数够
+		OS_EXIT_CRITICAL();
+	}else{//预数粒多数或者刚好数够
+		OS_EXIT_CRITICAL();
+		delay_ms (500);//延时一段时间再给信号
+		OS_ENTER_CRITICAL();
 		g_counter.total_count = g_counter.pre_count;
 		g_counter.pre_count = 0;
 		SEND_COUNTER_FIN_SIGNAL ();
@@ -503,8 +551,8 @@ void start_vibrate (void)
 		if (g_counter.pre_count < g_counter.set_pre_count){//达到设定的预数
 			VIBRATE_SWITCH = 0;
 		}
+		OS_EXIT_CRITICAL();
 	}
-	OS_EXIT_CRITICAL();
 }
 void stop_vibrate (void)
 {
@@ -636,6 +684,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 							g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE;
 							REJECT_FLAG = 0;
 							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
+							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
 						}
 						if (_ch->close_interval.data_hl > _ch->max_close_interval.data_hl){
 							_ch->max_close_interval.data_hl = _ch->close_interval.data_hl;

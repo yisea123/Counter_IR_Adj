@@ -262,7 +262,8 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(506, g_counter.min_len.data.l);
 	MAP_MODBUS_HOLDREG(507, g_counter.min_interval.data.h);
 	MAP_MODBUS_HOLDREG(508, g_counter.min_interval.data.l);
-
+	MAP_MODBUS_HOLDREG(509, g_counter.system_states);//地址510
+//
 	for (i = 0; i < 12; i++){
 		MAP_MODBUS_HOLDREG(512 + i, g_counter.set_door_n_close_delay[i]);
 	}
@@ -272,6 +273,44 @@ void Modbus_RegMap(void)
 	
 	MAP_MODBUS_HOLDREG(536, g_counter.std_ref_value_old);
 	MAP_MODBUS_HOLDREG(537, g_counter.std_ref_value);
+	//
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1024 + i, AD_DMA_buf.AD_Value_0[i][0]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1032 + i, AD_DMA_buf.AD_Value_0[i][1]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1040 + i, AD_DMA_buf.AD_Value_0[i][2]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1048 + i, AD_DMA_buf.AD_Value_0[i][3]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1056 + i, AD_DMA_buf.AD_Value_0[i][4]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1064 + i, AD_DMA_buf.AD_Value_0[i][5]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1072 + i, AD_DMA_buf.AD_Value_0[i][6]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1080 + i, AD_DMA_buf.AD_Value_0[i][7]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1088 + i, AD_DMA_buf.AD_Value_0[i][8]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1096 + i, AD_DMA_buf.AD_Value_0[i][9]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1104 + i, AD_DMA_buf.AD_Value_0[i][10]);
+	}
+	for (i = 0; i < 8; i++){
+		MAP_MODBUS_HOLDREG(1112 + i, AD_DMA_buf.AD_Value_0[i][11]);
+	}
+	
 
 	save_para (0); //save_para(1) 保存参数save_para(0) 读取参数
 	Modbus_HoldReg_NULL = 0;

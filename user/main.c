@@ -374,10 +374,16 @@ void io_task (void *pdata)
 		}
 		if (msg == 0x55){//外部IO信号
 			virtual_input[0] = PCin(6);
-			virtual_input[1] = PCin(7);
 			virtual_input[2] = PAin(8);
-			virtual_input[3] = PGin(11);
-			virtual_input[4] = PGin(0);
+			if (IS_SYS_RUNNING){
+				virtual_input[1] = 1;
+				virtual_input[3] = 1;
+				virtual_input[4] = 1;
+			}else{
+				virtual_input[1] = PCin(7);
+				virtual_input[3] = PGin(11);
+				virtual_input[4] = PGin(0);
+			}
 			virtual_input[5] = PGin(1);
 			virtual_input[6] = PGin(2);
 			virtual_input[7] = PGin(3);
@@ -420,7 +426,6 @@ void io_task (void *pdata)
 				if (PLC_ACK == 1){
 					start_vibrate ();
 					g_counter.counter_step = 0;
-					g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
 				}
 				break;
 			case 100://错误入口
@@ -428,32 +433,33 @@ void io_task (void *pdata)
 			default:break;
 		}
 		
-		if (virtual_input[1] == 0){//重新调整
-			virtual_input[1] = 1;
-			re_calibration_detect();
-		}
-		if (virtual_input[3] == 0){//复位
-			virtual_input[3] = 1;
-			counter_reset ();
-		}
-		if (virtual_input[4] == 0){//小料门手动
-			virtual_input[4] = 1;
-			if ((GPIOF->ODR & 0x0FFF) == 0 || (GPIOF->ODR & 0x0FFF) == 0x0FFF){
-				GPIOF->ODR = GPIOF->ODR ^ 0x0FFF;
-			}else{
-				GPIOF->ODR = GPIOF->ODR & 0xF000;
+		if (g_counter.system_states == 0){//停止状态下才可以手动
+			if (virtual_input[1] == 0){//重新调整
+				virtual_input[1] = 1;
+				re_calibration_detect();
 			}
-		}
-		if (virtual_input[5] == 0){//模拟一粒
-			g_counter.sim_ad_value = 35000;
-			g_counter.sim_flag = 0x55;
-			virtual_input[5] = 1;
-			TIM_Cmd(TIM6, ENABLE);  //使能TIMx外设	
-		}
-		
-		if (virtual_input[6] == 0){//清零
-			virtual_input[6] = 1;
-			counter_data_clear ();
+			if (virtual_input[3] == 0){//复位
+				virtual_input[3] = 1;
+				counter_reset ();
+			}
+			if (virtual_input[4] == 0){//小料门手动
+				virtual_input[4] = 1;
+				if ((GPIOF->ODR & 0x0FFF) == 0 || (GPIOF->ODR & 0x0FFF) == 0x0FFF){
+					GPIOF->ODR = GPIOF->ODR ^ 0x0FFF;
+				}else{
+					GPIOF->ODR = GPIOF->ODR & 0xF000;
+				}
+			}
+			if (virtual_input[5] == 0){//模拟一粒
+				g_counter.sim_ad_value = 35000;
+				g_counter.sim_flag = 0x55;
+				virtual_input[5] = 1;
+				TIM_Cmd(TIM6, ENABLE);  //使能TIMx外设	
+			}
+			if (virtual_input[6] == 0){//清零
+				virtual_input[6] = 1;
+				counter_data_clear ();
+			}
 		}
 	}
 }
@@ -496,7 +502,6 @@ void led1_task(void *pdata)
 void debug_task(void *pdata) 
 { 
 	u8 err;	
-	calibrate_IR ();
 	re_calibration_detect();
 	while (1)
 	{

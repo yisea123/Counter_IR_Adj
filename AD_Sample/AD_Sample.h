@@ -105,6 +105,7 @@
 	if (g_counter.rej_flag_buf.data.l > 0){ \
 		REJECT_FLAG = 0; \
 		g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*保存最后一次剔除原因*/ \
+		g_counter.rej_flag_clear_delay = 20000;/*设定2秒后清零剔除标志*/ \
 	} \
 	g_counter.counter_fin_signal_delay = g_counter.set_min_interval.data_hl+20; \
 }
@@ -129,8 +130,7 @@ enum COUNTER_STATE
 	PRE_COUNT
 };
 
-typedef struct
-{
+typedef struct{
 	S16 std_down_value0;
 	S16 std_up_value0;
 	S16 ad0_averaged_value;
@@ -143,8 +143,7 @@ typedef struct
 	U16 AD_min_index[3];
 }s_counter_env;
 
-typedef struct
-{
+typedef struct{
 	u16 buffer[AD_BUFF_SIZE];
 	u16 buffer_index;
 	u16 buffer_en;
@@ -160,8 +159,7 @@ typedef union{
 	}data;
 }s_32;
 
-typedef struct
-{
+typedef struct{
 	//s_chanel_pos pos[CHANEL_SENSOR_NUM];
 	U16 process_step;
 	U16 wave_down_flag;
@@ -201,8 +199,7 @@ typedef struct
 	uint32_t length_ticks;
 }s_chanel_info;
 
-typedef struct
-{
+typedef struct{
 	s_chanel_info ch[CHANEL_NUM];
 	U16 set_count;
 	U16 total_count;
@@ -218,7 +215,7 @@ typedef struct
 	U16 set_watch_ch;
 	U32 dma_buf_addr;
 	U32 buf_addr;
-	vu16 (* AD_buf_p)[CHANEL_NUM];
+	u16 (* AD_buf_p)[CHANEL_NUM];
 	U16 counter_step;
 	U16 set_std_up_v_offset;
 	U16 set_std_down_v_offset;
@@ -249,10 +246,18 @@ typedef struct
 	U16 sim_ad_value;
 	U16 sim_flag;
 	U16 set_door_n_close_delay[CHANEL_NUM];
+	U16 system_states;
 	U16 view_IR_DA_value[CHANEL_NUM];
 	U16 std_ref_value_old;
 	U16 std_ref_value;
 }s_counter_info;
+
+
+typedef struct {
+	u16 AD_Value_0[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
+	u16 AD_Value_1[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
+	u16 AD_Value_2[SAMPLE_NUM][CHANEL_NUM]; //用来存放ADC转换结果，也是DMA的目标地址
+}s_AD_buf;
 
 void AD_filter(U16 _detect_chanel_index, U16 _chanel_pos_index);
 int AD_Sample_init (void);
@@ -276,6 +281,7 @@ extern U16 chanel_pos_index;	//通道光敏二极管位置索引
 extern s_counter_info g_counter;
 
 extern s_buf AD_buff;
+extern s_AD_buf AD_DMA_buf;
 
 
 extern vu16 process_rdy;
