@@ -473,11 +473,19 @@ void led1_task(void *pdata)
 	while(1) 
 	{ 
 		if (my_env.is_registered == REGISTERED){
+			if ((process_rdy >= PROCESS_RDY)){
+				send_IR_value ();
+			}
 			//my_println ("%d", g_counter.ch[0].ad_averaged_value);
 			LED2 = !LED2;
 			delay_ms(100); 
 			if (counter_process_state == 0xE001){
-				delay_ms(400); 
+				LED2 = !LED2;
+				delay_ms(100); 
+				LED2 = !LED2;
+				delay_ms(100); 
+				LED2 = !LED2;
+				delay_ms(2000); 
 			}
 		}else{
 			//闪烁三次然后停2秒，提示未注册

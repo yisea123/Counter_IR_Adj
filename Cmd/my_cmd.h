@@ -18,7 +18,7 @@ enum
 	TTY_MODBUS
 };
 
-#define AD_8804_TIMEOUT (200)
+#define AD_8804_TIMEOUT (40)
 #define AD_8804_RETRY_TIME (3)
 
 /*

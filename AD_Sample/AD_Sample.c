@@ -3,7 +3,7 @@
 
 s_counter_info g_counter;
 
-vu16 process_rdy = PROCESS_RDY;
+vu16 process_rdy = PROCESS_RDY + PROCESS_RDY;
 
 s_AD_buf AD_DMA_buf;
 u16 After_filter[CHANEL_NUM]; //用来存放求平均值之后的结果
@@ -263,6 +263,14 @@ void ADC1_Configuration(void)
 }
 
 
+
+void send_IR_value (void)
+{
+	uint16_t i;
+	for (i = 0; i < CHANEL_NUM; i++){
+		send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]);
+	}
+}
 void calibrate_IR (void)
 {
 	int i;
@@ -273,7 +281,7 @@ void calibrate_IR (void)
 //#endif
 //	OS_ENTER_CRITICAL();
 	
-	for(i = 0; i < 12; i++){
+	for(i = 0; i < CHANEL_NUM; i++){
 		value_updated = 1;
 		while (value_updated){//每个通道单独调压
 			value_updated = 0;
@@ -911,7 +919,7 @@ void DMA1_Channel1_IRQHandler(void)
 	tim5_dma_cur_cnt = get_tim5_ticks();
 	dma_irq_cycle = tim5_dma_cur_cnt - tim5_dma_pre_cnt;
 	tim5_dma_pre_cnt = tim5_dma_cur_cnt;
-	if ((dma_irq_cycle > 2100) && (process_rdy >= PROCESS_RDY)){
+	if ((dma_irq_cycle > 2100) && (process_rdy == PROCESS_RDY)){
 		counter_process_state = 0xE001;
 	}
 /////////////////////////////////////////////////////////////////////////////////
