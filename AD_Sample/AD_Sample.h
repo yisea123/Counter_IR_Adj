@@ -13,7 +13,7 @@
 #define WAVE_UP 	g_counter.set_wave_up_flag //16
 #define WAVE_UP_V 	g_counter.set_wave_up_value //10
 
-#define STD_REF_VALUE (28100)
+#define STD_REF_VALUE (g_counter.std_ref_value)
 #define STD_REF_VALUE_L (STD_REF_VALUE - 100)
 #define STD_REF_VALUE_H (STD_REF_VALUE + 100)
 #define STD_DOWN_V_OFFSET g_counter.ch[i].std_down_offset
@@ -180,9 +180,9 @@ typedef struct{
 	U16 sample_size;
 	U16 state;
 	U16 door_close_delay;
-	S32 ad_averaged_value;
-	U16 ad_fitter_buff[AD_FITTER_BUFF_SIZE];
 	U16 ad_fitter_index;
+	S32 ad_averaged_value;
+	uint32_t ad_fitter_buff[AD_FITTER_BUFF_SIZE];
 	uint32_t area_sum_buf;//截面积
 	s_32 area_sum;//截面积
 	s_32 min_area_sum;

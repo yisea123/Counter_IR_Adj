@@ -413,7 +413,7 @@ void check_data (void)
 		g_counter.set_std_denumerator = 1;
 	}
 	if ((g_counter.set_adc_mode < 1) || (g_counter.set_adc_mode > 7)){
-		g_counter.set_adc_mode = 2;
+		g_counter.set_adc_mode = 3;
 	}
 	if (g_counter.set_min_interval.data_hl < 5){
 		g_counter.set_min_interval.data_hl = 5;
@@ -427,10 +427,10 @@ void check_data (void)
 			g_counter.set_door_n_close_delay[i] = g_counter.set_door_close_delay;
 		}
 		if (g_counter.std_ref_value != g_counter.std_ref_value_old){
-			g_counter.view_IR_DA_value[i] = 100;
+			g_counter.view_IR_DA_value[i] = 200;
 		}
 		if (g_counter.view_IR_DA_value[i] > 255){
-			g_counter.view_IR_DA_value[i] = 100;
+			g_counter.view_IR_DA_value[i] = 200;
 		}
 	}
 	g_counter.std_ref_value_old = g_counter.std_ref_value;
