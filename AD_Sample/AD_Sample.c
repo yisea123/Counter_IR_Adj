@@ -264,22 +264,27 @@ void ADC1_Configuration(void)
 
 
 
-void send_IR_value (void)
+uint32_t send_IR_value (void)
 {
 	uint16_t i;
+	uint16_t timeout = 0;
 	for (i = 0; i < CHANEL_NUM; i++){
-		send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]);
+		if (send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]) == 0){
+			timeout++;
+			if (timeout >= 2){
+				return timeout;
+			}
+		}else{
+			timeout = 0;
+		}
 	}
+	return 0;
 }
-void calibrate_IR (void)
+uint32_t calibrate_IR_0 (void)
 {
 	int i;
 	uint16_t timeout = 0;
 	uint16_t value_updated;
-//#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
-//    OS_CPU_SR  cpu_sr = 0u;
-//#endif
-//	OS_ENTER_CRITICAL();
 	
 	for(i = 0; i < CHANEL_NUM; i++){
 		value_updated = 1;
@@ -303,21 +308,52 @@ void calibrate_IR (void)
 				timeout = 0;
 			}
 			if (timeout >= 2){
-				my_println ("AD8804 Adjust Error");
-				break;
+				return timeout;
 			}
 		}
+	}
+	return 0;
+}
+uint32_t calibrate_IR_1 (void)
+{
+	int i;
+	uint16_t timeout = 0;
+	uint16_t value_updated;
+	
+	value_updated = 1;
+	while (value_updated > 0){
+		value_updated = 0;
+		delay_ms(2000);
+		for(i = 0; i < CHANEL_NUM; i++){
+			if (After_filter[i] < STD_REF_VALUE_L){
+				if (g_counter.view_IR_DA_value[i] < 255){
+					g_counter.view_IR_DA_value[i]++;
+					value_updated++;
+				}
+			}else if (After_filter[i] > STD_REF_VALUE_H){
+				if (g_counter.view_IR_DA_value[i] > 0){
+					g_counter.view_IR_DA_value[i]--;
+					value_updated++;
+				}
+			}
+		}
+		timeout = send_IR_value ();
 		if (timeout >= 2){
-			break;
+			return timeout;
 		}
 	}
-	if (timeout == 0){//没有错误可以保存
+	return 0;
+}
+void calibrate_IR (void)
+{
+	if (calibrate_IR_1 () == 0){//没有错误可以保存
 		my_println ("AD8804 Adjust finish");
 		send_ad8804_cmd_str ("set led2 1");
 		send_ad8804_cmd_str ("set led3 1");
 		save_para (2);//强制保存
+	}else{
+		my_println ("AD8804 Adjust Error");
 	}
-//	OS_EXIT_CRITICAL();
 }
 
 void re_calibration_detect (void)

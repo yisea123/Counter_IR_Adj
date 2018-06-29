@@ -13,6 +13,7 @@
 
 
 void led_init (void);
+void led_alarm (uint16_t flash_num, uint16_t flash_time, uint16_t cycle);
 
 
 #endif

@@ -180,7 +180,7 @@ void TIM3_IRQHandler(void)   //TIM3ÖÐ¶Ï
 		}
 		if (tim3_count == 1000){
 		////////////////////////////////////////////////////////////////////////
-			if (process_rdy < PROCESS_RDY){
+			if (process_rdy < (PROCESS_RDY - 1)){
 				process_rdy++;
 			}
 			check_data ();

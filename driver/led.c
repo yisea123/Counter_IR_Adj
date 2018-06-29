@@ -25,4 +25,19 @@ void led_init (void)
 	LED2 = !LED2;	
 }
 /*********************************************END OF FILE**********************/
+void led_alarm (uint16_t flash_num, uint16_t flash_time, uint16_t cycle)
+{
+	uint16_t i;
+	flash_num <<= 1;
+	for (i = 0; i < flash_num; i++){
+		LED2 = !LED2;
+		delay_ms(flash_time); 
+	}
+	if (cycle > flash_time){
+		delay_ms(cycle - flash_time); 
+	}else if (cycle == 0){
+	}else{
+		delay_ms(1900); 
+	}
+}
 

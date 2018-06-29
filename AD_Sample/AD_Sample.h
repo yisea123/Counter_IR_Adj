@@ -114,6 +114,7 @@
 #define COUNTER_FINISH_OP() { \
 	COUNT_COMPLETE = 0;  \
 	g_counter.complete_count++; /*数粒完成信号+1*/ \
+	g_counter.complete_res++; /*数粒完成信号+1*/ \
 }
 
 
@@ -263,7 +264,7 @@ typedef struct {
 void AD_filter(U16 _detect_chanel_index, U16 _chanel_pos_index);
 int AD_Sample_init (void);
 void calibrate_IR (void);
-void send_IR_value (void);
+uint32_t send_IR_value (void);
 void re_calibration_detect (void);
 u16 GetVolt(u16 advalue);
 extern u16 After_filter[CHANEL_NUM]; //用来存放求平均值之后的结果

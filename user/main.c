@@ -476,31 +476,16 @@ void led1_task(void *pdata)
 			if ((process_rdy >= PROCESS_RDY)){
 				send_IR_value ();
 			}
-			//my_println ("%d", g_counter.ch[0].ad_averaged_value);
-			LED2 = !LED2;
-			delay_ms(100); 
 			if (counter_process_state == 0xE001){
-				LED2 = !LED2;
-				delay_ms(100); 
-				LED2 = !LED2;
-				delay_ms(100); 
-				LED2 = !LED2;
-				delay_ms(2000); 
+			//闪烁两次然后停1秒，采样处理超时
+				led_alarm (2, 100, 1000);
+			}else{
+			//闪烁两次然后停0秒，正常运行
+				led_alarm (1, 100, 0);
 			}
 		}else{
 			//闪烁三次然后停2秒，提示未注册
-			LED2 = !LED2;
-			delay_ms(100); 
-			LED2 = !LED2;
-			delay_ms(100); 
-			LED2 = !LED2;
-			delay_ms(100); 
-			LED2 = !LED2;
-			delay_ms(100); 
-			LED2 = !LED2;
-			delay_ms(100); 
-			LED2 = !LED2;
-			delay_ms(2000); 
+			led_alarm (3, 100, 1000);
 		}
 		Modbus_HoldReg_CPU_Usage = OSCPUUsage;
 	}
