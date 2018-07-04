@@ -273,6 +273,7 @@ void Modbus_RegMap(void)
 	
 	MAP_MODBUS_HOLDREG(536, g_counter.std_ref_value_old);
 	MAP_MODBUS_HOLDREG(537, g_counter.std_ref_value);
+	MAP_MODBUS_HOLDREG(538, g_counter.std_ref_value_offset);
 	//
 	for (i = 0; i < 8; i++){
 		MAP_MODBUS_HOLDREG(1024 + i, AD_DMA_buf.AD_Value_0[i][0]);
@@ -427,10 +428,10 @@ void check_data (void)
 			g_counter.set_door_n_close_delay[i] = g_counter.set_door_close_delay;
 		}
 		if (g_counter.std_ref_value != g_counter.std_ref_value_old){
-			g_counter.view_IR_DA_value[i] = 200;
+			//g_counter.view_IR_DA_value[i] = 150;
 		}
 		if (g_counter.view_IR_DA_value[i] > 255){
-			g_counter.view_IR_DA_value[i] = 200;
+			g_counter.view_IR_DA_value[i] = 150;
 		}
 	}
 	g_counter.std_ref_value_old = g_counter.std_ref_value;

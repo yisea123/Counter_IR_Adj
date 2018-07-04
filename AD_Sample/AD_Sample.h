@@ -13,9 +13,10 @@
 #define WAVE_UP 	g_counter.set_wave_up_flag //16
 #define WAVE_UP_V 	g_counter.set_wave_up_value //10
 
+#define STD_REF_OFFSET (g_counter.std_ref_value_offset)
 #define STD_REF_VALUE (g_counter.std_ref_value)
-#define STD_REF_VALUE_L (STD_REF_VALUE - 100)
-#define STD_REF_VALUE_H (STD_REF_VALUE + 100)
+#define STD_REF_VALUE_L (STD_REF_VALUE - STD_REF_OFFSET)
+#define STD_REF_VALUE_H (STD_REF_VALUE + STD_REF_OFFSET)
 #define STD_DOWN_V_OFFSET g_counter.ch[i].std_down_offset
 #define STD_UP_V_OFFSET g_counter.ch[i].std_up_offset
 
@@ -252,6 +253,7 @@ typedef struct{
 	U16 view_IR_DA_value[CHANEL_NUM];
 	U16 std_ref_value_old;
 	U16 std_ref_value;
+	U16 std_ref_value_offset;
 }s_counter_info;
 
 

@@ -117,13 +117,8 @@
       <TargetDriverDllRegistry>
         <SetRegEntry>
           <Number>0</Number>
-          <Key>DLGUARM</Key>
-          <Name>湦$	湦$	趏3V</Name>
-        </SetRegEntry>
-        <SetRegEntry>
-          <Number>0</Number>
           <Key>JL2CM3</Key>
-          <Name>-U12345678 -O78 -S8 -ZTIFSpeedSel50000 -A0 -C0 -JU1 -JI127.0.0.1 -JP0 -RST0 -N00("ARM CoreSight SW-DP") -D00(1BA01477) -L00(4) -TO18 -TC10000000 -TP21 -TDS8004 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -TB1 -TFE0 -FO15 -FD20000000 -FC1000 -FN1 -FF0STM32F10x_512.FLM -FS08000000 -FL080000 -FP0($$Device:STM32F103ZE$Flash\STM32F10x_512.FLM)</Name>
+          <Name>-U20080643 -O78 -S8 -ZTIFSpeedSel50000 -A0 -C0 -JU1 -JI127.0.0.1 -JP0 -RST0 -N00("ARM CoreSight SW-DP") -D00(1BA01477) -L00(4) -TO18 -TC10000000 -TP21 -TDS8004 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -TB1 -TFE0 -FO15 -FD20000000 -FC1000 -FN1 -FF0STM32F10x_512.FLM -FS08000000 -FL080000 -FP0($$Device:STM32F103ZE$Flash\STM32F10x_512.FLM)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -143,7 +138,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGTARM</Key>
-          <Name>(1010=438,53,814,609,0)(1007=105,136,292,410,0)(1008=90,120,466,355,0)(1009=-1,-1,-1,-1,0)(100=634,48,1280,720,0)(110=60,87,280,546,0)(111=60,87,280,546,0)(1011=1329,122,1863,482,1)(180=-1,-1,-1,-1,0)(120=859,316,1280,720,0)(121=859,118,1280,522,0)(122=859,184,1280,588,0)(123=1099,269,1520,673,0)(124=859,146,1280,550,0)(125=859,232,1280,636,0)(126=268,139,689,544,0)(140=-1,-1,-1,-1,0)(240=881,135,1280,479,0)(190=-1,-1,-1,-1,0)(200=-1,-1,-1,-1,0)(170=-1,-1,-1,-1,0)(130=-1,-1,-1,-1,0)(131=686,27,1280,720,0)(132=631,0,1225,694,0)(133=686,27,1280,720,0)(160=695,280,1143,693,0)(161=723,170,1171,583,0)(162=659,117,1107,531,0)(210=-1,-1,-1,-1,0)(211=-1,-1,-1,-1,0)(220=-1,-1,-1,-1,0)(221=-1,-1,-1,-1,0)(230=-1,-1,-1,-1,0)(231=-1,-1,-1,-1,0)(232=-1,-1,-1,-1,0)(233=-1,-1,-1,-1,0)(150=677,87,1280,720,0)(151=-1,-1,-1,-1,0)</Name>
+          <Name>(1010=438,53,814,609,0)(1007=105,136,292,410,0)(1008=90,120,466,355,0)(1009=-1,-1,-1,-1,0)(100=634,48,1280,720,0)(110=60,87,280,546,0)(111=60,87,280,546,0)(1011=746,122,1280,483,0)(180=-1,-1,-1,-1,0)(120=859,316,1280,720,0)(121=859,118,1280,522,0)(122=859,184,1280,588,0)(123=859,269,1280,673,0)(124=859,146,1280,550,0)(125=859,232,1280,636,0)(126=268,139,689,544,0)(140=-1,-1,-1,-1,0)(240=881,135,1280,479,0)(190=-1,-1,-1,-1,0)(200=-1,-1,-1,-1,0)(170=-1,-1,-1,-1,0)(130=-1,-1,-1,-1,0)(131=686,27,1280,720,0)(132=631,0,1225,694,0)(133=686,27,1280,720,0)(160=695,280,1143,693,0)(161=723,170,1171,583,0)(162=659,117,1107,531,0)(210=-1,-1,-1,-1,0)(211=-1,-1,-1,-1,0)(220=-1,-1,-1,-1,0)(221=-1,-1,-1,-1,0)(230=-1,-1,-1,-1,0)(231=-1,-1,-1,-1,0)(232=-1,-1,-1,-1,0)(233=-1,-1,-1,-1,0)(150=677,87,1280,720,0)(151=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -155,34 +150,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>329</LineNumber>
+          <LineNumber>314</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134326320</Address>
+          <Address>134318828</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\user\main.c</Filename>
+          <Filename>.\AD_Sample\AD_Sample.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Counter\user/main.c\329</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>700</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134302598</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\Protocol\ModbusRTU.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Counter\Protocol/ModbusRTU.c\700</Expression>
+          <Expression>\\Counter\AD_Sample/AD_Sample.c\314</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -320,7 +299,7 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>1</periodic>
-        <aLwin>1</aLwin>
+        <aLwin>0</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
         <aSer2>0</aSer2>
@@ -335,7 +314,7 @@
         <aSer3>0</aSer3>
         <eProf>0</eProf>
         <aLa>0</aLa>
-        <aPa1>0</aPa1>
+        <aPa1>1</aPa1>
         <AscS4>0</AscS4>
         <aSer4>0</aSer4>
         <StkLoc>0</StkLoc>
@@ -629,7 +608,7 @@
       <GroupNumber>7</GroupNumber>
       <FileNumber>18</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>.\Cmd\my_cmd.c</PathWithFileName>

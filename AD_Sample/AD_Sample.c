@@ -269,7 +269,7 @@ uint32_t send_IR_value (void)
 	uint16_t i;
 	uint16_t timeout = 0;
 	for (i = 0; i < CHANEL_NUM; i++){
-		if (send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]) == 0){
+		if (send_ad8804_ch_value (i, g_counter.view_IR_DA_value[i]) == 0){
 			timeout++;
 			if (timeout >= 2){
 				return timeout;
@@ -292,7 +292,7 @@ uint32_t calibrate_IR_0 (void)
 			value_updated = 0;
 			delay_ms(10);
 			if (After_filter[i] < STD_REF_VALUE_L){
-				if (g_counter.view_IR_DA_value[i] < 255){
+				if (g_counter.view_IR_DA_value[i] < 160){
 					g_counter.view_IR_DA_value[i]++;
 					value_updated++;
 				}
@@ -302,7 +302,7 @@ uint32_t calibrate_IR_0 (void)
 					value_updated++;
 				}
 			}
-			if (send_ad8804_ch_value (i+1, g_counter.view_IR_DA_value[i]) == 0){
+			if (send_ad8804_ch_value (i, g_counter.view_IR_DA_value[i]) == 0){
 				timeout++;
 			}else{
 				timeout = 0;
@@ -362,6 +362,7 @@ void re_calibration_detect (void)
 #if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
+	COUNT_COMPLETE = 1;
 	calibrate_IR ();
 	counter_reset ();
 	OS_ENTER_CRITICAL();
