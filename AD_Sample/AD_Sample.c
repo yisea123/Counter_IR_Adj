@@ -537,7 +537,7 @@ uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
 		AD[C] /= S;  \
 ///////////////////////////////////////////////////////////////
 #if (SAMPLE_NUM == 8)
-#define AD_PRE_FITTER(AD,BUF,C,S) { \
+#define AD_PRE_FITTER_1(AD,BUF,C,S) { \
 		sort_temp[0] = BUF[0][C]; \
 		sort_temp[1] = BUF[1][C]; \
 		sort_temp[2] = BUF[2][C]; \
@@ -562,7 +562,23 @@ uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
 	
 //  \
 	g_counter.ch[C].std_v = AD[C]; \
-		
+
+//============================================
+#if (SAMPLE_NUM == 8)
+#define AD_PRE_FITTER(AD,BUF,C,S) { \
+		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
+						BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
+		if (g_counter.ch[C].ad_fitter_index >= AD_FITTER_BUFF_SIZE){ \
+			g_counter.ch[C].ad_fitter_index = 0; \
+		} \
+		g_counter.ch[C].ad_averaged_value += AD[C]; \
+		g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
+		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
+		AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
+		g_counter.ch[C].ad_fitter_index++; \
+	}
+
+#endif
 	
 #define START_DATA 5
 #if (SAMPLE_NUM == 8)
