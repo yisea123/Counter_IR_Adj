@@ -205,11 +205,13 @@ typedef struct{
 typedef struct{
 	s_chanel_info ch[CHANEL_NUM];
 	U16 set_count;
+	U16 set_pre_count;
+	U16 set_count_new;
+	U16 set_pre_count_new;
 	U16 total_count;
 	U16 counter_state;
 	U16 set_door_close_delay;
 	U16 set_adc_mode;
-	U16 set_pre_count;
 	U16 pre_count;
 	U16 total_reject;
 	U16 total_good;

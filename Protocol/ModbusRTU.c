@@ -149,8 +149,8 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(28, g_counter.total_good);
 	MAP_MODBUS_HOLDREG(29, Modbus_HoldReg_CPU_Usage);
 
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 0, 	g_counter.set_count);
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 1, 	g_counter.set_pre_count);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 0, 	g_counter.set_count_new);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 1, 	g_counter.set_pre_count_new);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 2, 	g_counter.set_door_close_delay);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 3, 	g_counter.set_adc_mode);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 4, 	g_counter.set_max_interval.data.h);

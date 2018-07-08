@@ -627,6 +627,11 @@ void start_vibrate (void)
 	OPEN_DOOR(10);
 	OPEN_DOOR(11);
 	g_counter.rej_flag_buf.data_hl >>= 16;
+	///////////////////////////////////////////////////////
+	//改参数后下一瓶生效///////////////////////////////////
+	g_counter.set_count = g_counter.set_count_new;
+	g_counter.set_pre_count = g_counter.set_pre_count_new;
+	///////////////////////////////////////////////////////
 	if (g_counter.pre_count < g_counter.set_count){
 		g_counter.total_count = g_counter.pre_count;
 		g_counter.pre_count = 0;
