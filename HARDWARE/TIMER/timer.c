@@ -56,6 +56,12 @@ u16 tim2_irq_process_time = 0;
 					DOOR_##CH = 0; \
 				} \
 			}
+//
+#define CHECK_PIECE_IN_STATUS(CH) if (g_counter.ch[CH].piece_in == 1){ \
+	g_counter.ch[CH].piece_in_time++; \
+}
+			
+
 
 uint32_t sys_run_time	= 0;//100us的精度
 void TIM2_IRQHandler(void)   //TIM2中断
@@ -93,6 +99,19 @@ void TIM2_IRQHandler(void)   //TIM2中断
 				}
 			}
 		}
+		
+		CHECK_PIECE_IN_STATUS (0);
+		CHECK_PIECE_IN_STATUS (1);
+		CHECK_PIECE_IN_STATUS (2);
+		CHECK_PIECE_IN_STATUS (3);
+		CHECK_PIECE_IN_STATUS (4);
+		CHECK_PIECE_IN_STATUS (5);
+		CHECK_PIECE_IN_STATUS (6);
+		CHECK_PIECE_IN_STATUS (7);
+		CHECK_PIECE_IN_STATUS (8);
+		CHECK_PIECE_IN_STATUS (9);
+		CHECK_PIECE_IN_STATUS (10);
+		CHECK_PIECE_IN_STATUS (11);
 	}
 ///////////////////////////////////////////////////////////////////////////////////////////
 	tim2_irq_process_time = get_tim5_ticks () - tick_old + 2;

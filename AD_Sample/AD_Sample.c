@@ -493,10 +493,15 @@ uint32_t sort_temp[SAMPLE_NUM];
 
 uint16_t get_ad_fitter_value (uint32_t AD[])
 {
+#if 0
+	BubbleSort (AD, SAMPLE_NUM);
 	return (((AD[0] * (MIN_POW_V0 * M_MULT)) + (AD[1] * (MIN_POW_V1 * M_MULT)) + 
 					(AD[2] * (MIN_POW_V2 * M_MULT)) + (AD[3] * (MIN_POW_V3 * M_MULT))+
 					(AD[4] * (MIN_POW_V4 * M_MULT)) + (AD[5] * (MIN_POW_V5 * M_MULT)) +
 					(AD[6] * (MIN_POW_V6 * M_MULT)) + (AD[7] * (MIN_POW_V7 * M_MULT))) / M_DIV);
+#else	
+	return (AD[0] + AD[1] + AD[2] + AD[3] + AD[4] + AD[5] + AD[6] + AD[7]);
+#endif
 }
 ///////////////////////////////////////////////////////////////////////////////////////
 #define NEW_POW_V0 (3)
@@ -514,22 +519,41 @@ uint16_t get_ad_fitter_value (uint32_t AD[])
 							)
 #define N_MULT (1)
 
-uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
+
+uint16_t get_ad_averaged_value (uint16_t C, uint16_t ad_value)
 {
+#if 1
+	
 	#if (AD_FITTER_BUFF_SIZE != 8)
 	#error "AD_FITTER_BUFF_SIZE must be == 8"
 	#endif
+	uint16_t ad = ad_value;
+	uint16_t index;
 	uint32_t AD[AD_FITTER_BUFF_SIZE];
 	int i;
+	g_counter.ch[C].ad_fitter_index %= AD_FITTER_BUFF_SIZE; 
+	g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = ad; 
+	index = g_counter.ch[C].ad_fitter_index;
 	for (i = 0; i < AD_FITTER_BUFF_SIZE; i++){
 		index++;
 		index %= AD_FITTER_BUFF_SIZE;
-		AD[i] = AD_BUFF[index];
+		AD[i] = g_counter.ch[C].ad_fitter_buff[index];
 	}
+	g_counter.ch[C].ad_fitter_index++; 
 	return 	(((AD[0] * (NEW_POW_V0 * N_MULT)) + (AD[1] * (NEW_POW_V1 * N_MULT)) + 
 						(AD[2] * (NEW_POW_V2 * N_MULT)) + (AD[3] * (NEW_POW_V3 * N_MULT))+
 						(AD[4] * (NEW_POW_V4 * N_MULT)) + (AD[5] * (NEW_POW_V5 * N_MULT)) +
 						(AD[6] * (NEW_POW_V6 * N_MULT)) + (AD[7] * (NEW_POW_V7 * N_MULT))) / N_DIV);
+#else	
+	uint16_t ad = ad_value;
+	g_counter.ch[C].ad_fitter_index %= AD_FITTER_BUFF_SIZE; 
+	g_counter.ch[C].ad_averaged_value += ad; 
+	g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; 
+	g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = ad; 
+	ad = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; 
+	g_counter.ch[C].ad_fitter_index++; 
+	return ad;
+#endif
 }
 //backup//////////////////////////////////////////////////////\
 		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
@@ -546,20 +570,25 @@ uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
 		sort_temp[5] = BUF[5][C]; \
 		sort_temp[6] = BUF[6][C]; \
 		sort_temp[7] = BUF[7][C]; \
-		BubbleSort (sort_temp, SAMPLE_NUM); \
 		AD[C] = get_ad_fitter_value (sort_temp); \
-		g_counter.ch[C].ad_fitter_index %= AD_FITTER_BUFF_SIZE; \
-		/*g_counter.ch[C].ad_averaged_value += AD[C];*/ \
-		/*g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index];*/ \
-		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
-		/*AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE;*/ \
-		AD[C] = get_ad_averaged_value (g_counter.ch[C].ad_fitter_buff, g_counter.ch[C].ad_fitter_index); \
-		g_counter.ch[C].ad_fitter_index++; \
+		AD[C] = get_ad_averaged_value (C, AD[C]); \
 	}
-
 #endif
+//
 
-	
+void set_std_offset (uint16 C)
+{
+	g_counter.ch[C].std_down_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min);
+	g_counter.ch[C].std_up_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min - 1);
+	g_counter.ch[C].std_down_offset *= g_counter.set_std_numerator;
+	g_counter.ch[C].std_up_offset *= g_counter.set_std_numerator;
+//	g_counter.ch[C].std_down_offset /= (g_counter.set_std_denumerator);
+//	g_counter.ch[C].std_up_offset /= (g_counter.set_std_denumerator);	
+	g_counter.ch[C].std_down_offset /= 10;
+	g_counter.ch[C].std_up_offset /= 10;
+}
+
+
 //  \
 	g_counter.ch[C].std_v = AD[C]; \
 
@@ -568,13 +597,22 @@ uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
 #define AD_PRE_FITTER(AD,BUF,C,S) { \
 		AD[C] = BUF[0][C] + BUF[1][C] + BUF[2][C] + BUF[3][C] + \
 						BUF[4][C] + BUF[5][C] + BUF[6][C] + BUF[7][C]; \
-		if (g_counter.ch[C].ad_fitter_index >= AD_FITTER_BUFF_SIZE){ \
-			g_counter.ch[C].ad_fitter_index = 0; \
+		g_counter.ch[C].ad_fitter_index %= AD_FITTER_BUFF_SIZE; \
+		if (process_rdy > START_DATA){ \
+			g_counter.ch[C].ad_averaged_value += AD[C]; \
+			g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
+			g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
+			AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
+		}else if (process_rdy < START_DATA){ \
+			g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
+		}else if (process_rdy == START_DATA){ \
+			uint16_t i; \
+			g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
+			g_counter.ch[C].ad_averaged_value = 0; \
+			for (i = 0; i < AD_FITTER_BUFF_SIZE; i++){ \
+				g_counter.ch[C].ad_averaged_value += g_counter.ch[C].ad_fitter_buff[i]; \
+			} \
 		} \
-		g_counter.ch[C].ad_averaged_value += AD[C]; \
-		g_counter.ch[C].ad_averaged_value -= g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index]; \
-		g_counter.ch[C].ad_fitter_buff[g_counter.ch[C].ad_fitter_index] = AD[C]; \
-		AD[C] = g_counter.ch[C].ad_averaged_value / AD_FITTER_BUFF_SIZE; \
 		g_counter.ch[C].ad_fitter_index++; \
 	}
 
@@ -596,12 +634,7 @@ uint16_t get_ad_averaged_value (uint32_t AD_BUFF[], uint16_t index)
 			}\
 		} \
 		if ((process_rdy + 1) == PROCESS_RDY){ \
-			g_counter.ch[C].std_down_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min); \
-			g_counter.ch[C].std_up_offset = (g_counter.ch[C].ad_max - g_counter.ch[C].ad_min - 1); \
-			g_counter.ch[C].std_down_offset *= g_counter.set_std_numerator; \
-			g_counter.ch[C].std_up_offset *= g_counter.set_std_numerator; \
-			g_counter.ch[C].std_down_offset /= (g_counter.set_std_denumerator); \
-			g_counter.ch[C].std_up_offset /= (g_counter.set_std_denumerator); \
+			set_std_offset (C); \
 		} \
 	}
 #endif
@@ -740,6 +773,8 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			_ch->counter_state = NORMAL_COUNT;
 			_ch->sample_index = 0;
 
+			_ch->piece_in = 0;
+			_ch->piece_in_time = 0;
 			_ch->process_step = 6;
 			_ch->state = CH_IDLE;
 			_ch->interval_ticks = get_sys_run_time ();
@@ -760,7 +795,6 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				r_code = save_detect_data (_ch_id, &_ch->sample_index, _ad_value_);
 				_ch->state = CH_BUSY;
 				_ch->wave_down_flag++;
-//				_ch->area_sum_buf += ad_change_v;
 
 				if (_ad_value_ < _ch->ad_value_min_temp){
 					_ch->ad_value_min_temp = _ad_value_;
@@ -771,12 +805,13 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				_ch->state = CH_IDLE;
 				_ch->ad_value_min_temp = 0xFFFF;
 				_ch->ad_value_min = 0xFFFF;
-//				_ch->area_sum_buf = 0;
 			}
 
 			if (_ch->wave_down_flag > WAVE_DOWN){//检测到有药粒
 				_ch->length_ticks = get_sys_run_time ();
 				_ch->interval.data_hl = _ch->length_ticks - _ch->interval_ticks;
+				_ch->piece_in_time = 0;
+				_ch->piece_in = 1;
 				///////////////////////////////////////////////////////////////////////////////////////////
 				//计数
 				///////////////////////////////////////////////////////////////////////////////////////////
@@ -784,8 +819,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				if (_ch->counter_state == NORMAL_COUNT){//通道正常数粒状态
 					if ((g_counter.total_count) < g_counter.set_count){//判断当前这粒是属于哪一瓶
 						g_counter.total_count++;
-						if (g_counter.total_count == g_counter.set_count){//当前这一瓶的最后一粒
-							g_counter.counter_state = PRE_COUNT;//数粒机进入预数粒状态
+						if (g_counter.total_count >= g_counter.set_count){//当前这一瓶的最后一粒
 							g_counter.last_piece_chanel_id = _ch_id;
 							if (g_counter.pre_count >= g_counter.set_pre_count){
 								pause_vibrate();
@@ -822,6 +856,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 							g_counter.rej_flag_buf.data.h |= REJ_TOO_MORE;
 						}
 						_ch->counter_state = PRE_COUNT;
+						g_counter.counter_state = PRE_COUNT;//数粒机进入预数粒状态
 						PRE_COUNT_FLAG = 0;
 					}
 				}else{// if (_ch->counter_state == PRE_COUNT){//通道预数粒状态
@@ -857,13 +892,13 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 
 			r_code = save_detect_data (_ch_id, &_ch->sample_index, _ad_value_);
 
-//			_ch->area_sum_buf += ad_change_v;
-
 			if (_ad_value_ < _ch->ad_value_min_temp){
 				_ch->ad_value_min_temp = _ad_value_;
 				_ch->wave_up_flag = 0;
 			}else if (_ad_value_ > _ch->ad_value_min_temp + WAVE_UP_V){
 				_ch->wave_up_flag++;
+			}else{
+				_ch->wave_up_flag = 0;
 			}
 
 			if (_ch->wave_up_flag > WAVE_UP){//经过了波谷后
@@ -902,8 +937,6 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				}
 
 				_ch->area_sum.data_hl = ((g_counter.ch[_ch_id].std_v - _ch->ad_value_min) *_ch->len.data_hl) / 20;
-//				_ch->area_sum.data_hl = _ch->area_sum_buf + ad_change_v;//最终面积
-//				_ch->area_sum_buf = 0;
 				if (_ch->area_sum.data_hl > _ch->max_area_sum.data_hl){
 					_ch->max_area_sum.data_hl = _ch->area_sum.data_hl;
 					if (_ch->max_area_sum.data_hl > g_counter.max_area_sum.data_hl){
@@ -949,6 +982,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				_ch->state = CH_DATA_RDY;
 				_ch->sample_index = 0;
 				_ch->wave_up_flag = 0;
+				_ch->piece_in = 0;
 			}
 
 			break;

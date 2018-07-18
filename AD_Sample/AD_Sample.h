@@ -181,6 +181,8 @@ typedef struct{
 	U16 sample_index;
 	U16 sample_size;
 	U16 state;
+	U16 piece_in;
+	U32 piece_in_time;
 	U16 door_close_delay;
 	U16 ad_fitter_index;
 	S32 ad_averaged_value;
