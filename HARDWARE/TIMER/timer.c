@@ -88,6 +88,11 @@ void TIM2_IRQHandler(void)   //TIM2ÖÐ¶Ï
 		if (g_counter.counter_fin_signal_delay > 0){
 			g_counter.counter_fin_signal_delay--;
 			if (g_counter.counter_fin_signal_delay == 0){
+				if (REJECT_FLAG == 0){
+					g_counter.total_reject++;
+				}else{
+					g_counter.total_good++;
+				}
 				COUNTER_FINISH_OP ();
 			}
 		}

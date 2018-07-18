@@ -396,14 +396,7 @@ void io_task (void *pdata)
 			case 0:
 				if ((PLC_ACK == 0)){//开始启动
 					if ((COUNT_COMPLETE == 0)){//开始启动
-						if (REJECT_FLAG == 0){
-							g_counter.total_reject++;
-							REJECT_FLAG = 1;//剔除标志
-						}else{
-							if (g_counter.counter_state != COUNTER_IDLE){
-								g_counter.total_good++;
-							}
-						}
+						REJECT_FLAG = 1;//剔除标志
 						COUNT_COMPLETE = 1;//应答
 						g_counter.counter_step = 15;
 					}
