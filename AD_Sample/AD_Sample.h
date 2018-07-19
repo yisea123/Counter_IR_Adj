@@ -58,36 +58,36 @@
 #define AD_DMA_BUF_GROUP 2
 
 //Rej flag
-#define REJ_TOO_MORE 	0x0001 //多数
-#define REJ_TOO_LONG 	0x0002 //超长
-#define REJ_TOO_SHORT 	0x0004 //超短
-#define REJ_TOO_BIG 	0x0008 //面积太大
-#define REJ_TOO_SMALL 	0x0010 //面积太小
-#define REJ_TOO_CLOSE 	0x0020 //关门间隔太小
-#define REJ_TOO_FAST 	0x0040 //开关间隔太小
+#define REJ_TOO_MORE 								0x0001 //多数
+#define REJ_TOO_LONG 								0x0002 //超长
+#define REJ_TOO_SHORT 							0x0004 //超短
+#define REJ_TOO_BIG 								0x0008 //面积太大
+#define REJ_TOO_SMALL 							0x0010 //面积太小
+#define REJ_TOO_CLOSE 							0x0020 //关门间隔太小
+#define REJ_DOOR_SWITCH_TOO_FAST 		0x0040 //开关间隔太小
 
 
 
 #define OPEN_DOOR(CH) { \
 	g_counter.ch[CH].door_close_delay = 0; \
 	g_counter.ch[CH].cur_count = 0; \
-	g_counter.last_piece_chanel_id = 0xFFFF; \
+	g_counter.last_piece_chanel_id = 0xFF; \
 	g_counter.ch[CH].counter_state = NORMAL_COUNT; \
 	DOOR_##CH = 1; \
-	g_counter.ch[CH].close_switch_interval_ticks = current_ticks; \
+	g_counter.ch[CH].door_close_ticks = current_ticks; \
 }
 #define CHANEL_INIT(CH) { \
 	OPEN_DOOR(CH) \
 	g_counter.ch[CH].max_interval.data_hl = 0; \
 	g_counter.ch[CH].max_len.data_hl = 0; \
-	g_counter.ch[CH].max_close_interval.data_hl = 0; \
+	g_counter.ch[CH].max_close_door_interval.data_hl = 0; \
 	g_counter.ch[CH].max_area_sum.data_hl = 0; \
 	g_counter.ch[CH].min_interval.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].min_len.data_hl = 0xFFFFFFFF; \
-	g_counter.ch[CH].min_close_interval.data_hl = 0xFFFFFFFF; \
+	g_counter.ch[CH].min_close_door_interval.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].min_area_sum.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].interval.data_hl = 0; \
-	g_counter.ch[CH].close_interval.data_hl = 0; \
+	g_counter.ch[CH].close_door_interval.data_hl = 0; \
 	g_counter.ch[CH].len.data_hl = 0; \
 	g_counter.ch[CH].area_sum.data_hl = 0; \
 	g_counter.ch[CH].cur_count = 0; \
@@ -96,11 +96,11 @@
 	g_counter.ch[CH].ad_max = 0; \
 	g_counter.ch[CH].max_interval.data_hl = 0; \
 	g_counter.ch[CH].max_len.data_hl = 0; \
-	g_counter.ch[CH].max_close_interval.data_hl = 0; \
+	g_counter.ch[CH].max_close_door_interval.data_hl = 0; \
 	g_counter.ch[CH].max_area_sum.data_hl = 0; \
 	g_counter.ch[CH].min_interval.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].min_len.data_hl = 0xFFFFFFFF; \
-	g_counter.ch[CH].min_close_interval.data_hl = 0xFFFFFFFF; \
+	g_counter.ch[CH].min_close_door_interval.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].min_area_sum.data_hl = 0xFFFFFFFF; \
 	g_counter.ch[CH].ad_min = 0xFFFF; \
 }
@@ -198,13 +198,13 @@ typedef struct{
 	s_32 min_len;
 	s_32 max_len;
 	s_32 interval;
-	s_32 close_interval;
-	s_32 min_close_interval;
-	s_32 max_close_interval;
+	s_32 close_door_interval;
+	s_32 min_close_door_interval;
+	s_32 max_close_door_interval;
 	s_32 min_interval;
 	s_32 max_interval;
-	s_32 close_switch_interval;
-	uint32_t close_switch_interval_ticks;
+	s_32 door_switch_interval;
+	uint32_t door_close_ticks;
 	uint32_t interval_ticks;
 	uint32_t length_ticks;
 }s_chanel_info;
@@ -235,6 +235,8 @@ typedef struct{
 	U16 set_wave_up_flag;
 	U16 set_wave_up_value;
 	U16 set_door_switch_interval;
+	U16 set_door_switch_delay;
+	U16 set_vib_restart_delay;
 	U16 std_ref_value_old;
 	U16 std_ref_value;
 	U16 std_ref_value_offset;
@@ -255,8 +257,8 @@ typedef struct{
 	s_32 min_len;
 	s_32 max_len;
 	s_32 min_interval;
-	s_32 min_close_interval;
-	s_32 max_close_interval;
+	s_32 min_close_door_interval;
+	s_32 max_close_door_interval;
 	U32 complete_count;
 	U32 complete_res;
 	U16 sim_ad_value;

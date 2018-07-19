@@ -49,11 +49,11 @@ void counter_init (void)
 	g_counter.sim_ad_value = 35000;
 
 	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_interval.data_hl = 0;
+	g_counter.max_close_door_interval.data_hl = 0;
 	g_counter.max_area_sum.data_hl = 0;
 	g_counter.min_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_interval.data_hl = 0xFFFFFFFF;
+	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
 }
 
@@ -85,11 +85,11 @@ void counter_reset (void)
 	CHANEL_INIT(10);
 	CHANEL_INIT(11);
 	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_interval.data_hl = 0;
+	g_counter.max_close_door_interval.data_hl = 0;
 	g_counter.max_area_sum.data_hl = 0;
 	g_counter.min_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_interval.data_hl = 0xFFFFFFFF;
+	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
 	stop_vibrate ();
 	REJECT_FLAG = 1;//剔除标志
@@ -120,11 +120,11 @@ void counter_data_clear (void)
 	CHANEL_DATA_CLEAR(10);
 	CHANEL_DATA_CLEAR(11);
 	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_interval.data_hl = 0;
+	g_counter.max_close_door_interval.data_hl = 0;
 	g_counter.max_area_sum.data_hl = 0;
 	g_counter.min_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_interval.data_hl = 0xFFFFFFFF;
+	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
 	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
 
 	OS_EXIT_CRITICAL();
@@ -665,7 +665,7 @@ void start_vibrate (void)
     OS_CPU_SR  cpu_sr = 0u;
 #endif
 	uint32_t current_ticks;
-	OS_ENTER_CRITICAL();
+	OS_ENTER_CRITICAL();//<-------------------------- 1
 	current_ticks = get_sys_run_time ();
 	OPEN_DOOR(0);
 	OPEN_DOOR(1);
@@ -685,6 +685,18 @@ void start_vibrate (void)
 	g_counter.set_count = g_counter.set_count_new;
 	g_counter.set_pre_count = g_counter.set_pre_count_new;
 	///////////////////////////////////////////////////////
+	if ((g_counter.set_count > g_counter.pre_count) && 
+			(g_counter.set_count - g_counter.pre_count < 40)){//判断预数粒是否很接近装量
+		OS_EXIT_CRITICAL();//<-------------------------- 
+		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再启动振动器
+		OS_ENTER_CRITICAL();//<-------------------------- 1
+	}
+	if ((g_counter.rej_flag_buf.data.l & REJ_TOO_CLOSE) || 
+			(g_counter.rej_flag_buf.data.l & REJ_DOOR_SWITCH_TOO_FAST)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号
+		if (g_counter.pre_count < g_counter.set_count){
+			g_counter.pre_count = g_counter.set_count;
+		}
+	}
 	if (g_counter.pre_count < g_counter.set_count){
 		g_counter.total_count = g_counter.pre_count;
 		g_counter.pre_count = 0;
@@ -698,8 +710,8 @@ void start_vibrate (void)
 		OS_ENTER_CRITICAL();
 		g_counter.total_count = g_counter.pre_count;
 		g_counter.pre_count = 0;
-		SEND_COUNTER_FIN_SIGNAL ();
 		g_counter.counter_state = PRE_COUNT;
+		SEND_COUNTER_FIN_SIGNAL ();
 		if (g_counter.pre_count < g_counter.set_pre_count){//达到设定的预数
 			VIBRATE_SWITCH = 0;
 		}
@@ -784,11 +796,11 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			_ch->interval_ticks = get_sys_run_time ();
 			_ch->max_interval.data_hl = 0;
 			_ch->max_len.data_hl = 0;
-			_ch->max_close_interval.data_hl = 0;
+			_ch->max_close_door_interval.data_hl = 0;
 			_ch->max_area_sum.data_hl = 0;
 			_ch->min_interval.data_hl = 0xFFFFFFFF;
 			_ch->min_len.data_hl = 0xFFFFFFFF;
-			_ch->min_close_interval.data_hl = 0xFFFFFFFF;
+			_ch->min_close_door_interval.data_hl = 0xFFFFFFFF;
 			_ch->min_area_sum.data_hl = 0xFFFFFFFF;
 			_ch->area_sum.data_hl = 0;
 
@@ -814,7 +826,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			if (_ch->wave_down_flag > WAVE_DOWN){//检测到有药粒
 				_ch->length_ticks = get_sys_run_time ();
 				_ch->interval.data_hl = _ch->length_ticks - _ch->interval_ticks;
-				_ch->close_switch_interval.data_hl = _ch->length_ticks - _ch->close_switch_interval_ticks;
+				_ch->door_switch_interval.data_hl = _ch->length_ticks - _ch->door_close_ticks;
 				_ch->piece_in_time = 0;
 				_ch->piece_in = 1;
 				///////////////////////////////////////////////////////////////////////////////////////////
@@ -832,31 +844,34 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 						}
 					}else{//已经达到设定的计数量，开始预数
 						_ch->door_close_delay = g_counter.set_door_n_close_delay[_ch_id];/*小料门关闭延时*/
-						_ch->close_interval.data_hl = _ch->interval.data_hl;
-						if (_ch->close_interval.data_hl < g_counter.set_min_interval.data_hl){/*小料门关闭时药粒间隔太小*/
+						_ch->close_door_interval.data_hl = _ch->interval.data_hl;
+						if (_ch->close_door_interval.data_hl < g_counter.set_min_interval.data_hl){/*小料门关闭时药粒间隔太小*/
+							pause_vibrate();//因为要剔除了，没必要再继续数粒，故停止振动器
 							g_counter.rej_flag_buf.data.h |= REJ_TOO_CLOSE;
 							g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE;
 							REJECT_FLAG = 0;
 							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
 							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
 						}
-						if (_ch->close_switch_interval.data_hl < g_counter.set_door_switch_interval){/*小料门开关间隔太小*/
-							g_counter.rej_flag_buf.data.h |= REJ_TOO_FAST;
-							g_counter.rej_flag_buf.data.l |= REJ_TOO_FAST;
+						if (_ch->door_switch_interval.data_hl < g_counter.set_door_switch_interval){/*小料门开关间隔太小*/
+							pause_vibrate();//因为要剔除了，没必要再继续数粒，故停止振动器
+							_ch->door_close_delay += g_counter.set_door_switch_delay;//开关频率太快，需额外加一段延时等待料门完全打开
+							g_counter.rej_flag_buf.data.h |= REJ_DOOR_SWITCH_TOO_FAST;
+							g_counter.rej_flag_buf.data.l |= REJ_DOOR_SWITCH_TOO_FAST;
 							REJECT_FLAG = 0;
 							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
 							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
 						}
-						if (_ch->close_interval.data_hl > _ch->max_close_interval.data_hl){
-							_ch->max_close_interval.data_hl = _ch->close_interval.data_hl;
-							if (_ch->max_close_interval.data_hl > g_counter.max_close_interval.data_hl){
-								g_counter.max_close_interval.data_hl = _ch->max_close_interval.data_hl;
+						if (_ch->close_door_interval.data_hl > _ch->max_close_door_interval.data_hl){
+							_ch->max_close_door_interval.data_hl = _ch->close_door_interval.data_hl;
+							if (_ch->max_close_door_interval.data_hl > g_counter.max_close_door_interval.data_hl){
+								g_counter.max_close_door_interval.data_hl = _ch->max_close_door_interval.data_hl;
 							}
 						}
-						if (_ch->close_interval.data_hl < _ch->min_close_interval.data_hl){
-							_ch->min_close_interval.data_hl = _ch->close_interval.data_hl;
-							if (_ch->min_close_interval.data_hl < g_counter.min_close_interval.data_hl){
-								g_counter.min_close_interval.data_hl = _ch->min_close_interval.data_hl;
+						if (_ch->close_door_interval.data_hl < _ch->min_close_door_interval.data_hl){
+							_ch->min_close_door_interval.data_hl = _ch->close_door_interval.data_hl;
+							if (_ch->min_close_door_interval.data_hl < g_counter.min_close_door_interval.data_hl){
+								g_counter.min_close_door_interval.data_hl = _ch->min_close_door_interval.data_hl;
 							}
 						}
 						_ch->cur_count = 1;

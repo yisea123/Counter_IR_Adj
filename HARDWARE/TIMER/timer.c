@@ -87,6 +87,11 @@ void TIM2_IRQHandler(void)   //TIM2中断
 		CHECK_DOOR_CLOSE_FLAG (11);
 		if (g_counter.counter_fin_signal_delay > 0){
 			g_counter.counter_fin_signal_delay--;
+			if ((g_counter.rej_flag_buf.data.l & REJ_TOO_CLOSE) || 
+					(g_counter.rej_flag_buf.data.l & REJ_DOOR_SWITCH_TOO_FAST)){//这两种原因，再额外延时一段时间，等振动器停下来，再给完成信号
+				g_counter.counter_fin_signal_delay = 10000;//单位是 0.1ms
+				g_counter.rej_flag_buf.data.l = 0;
+			}
 			if (g_counter.counter_fin_signal_delay == 0){//数粒完成信号
 				if (REJECT_FLAG == 0){
 					g_counter.total_reject++;
