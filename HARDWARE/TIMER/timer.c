@@ -87,7 +87,7 @@ void TIM2_IRQHandler(void)   //TIM2中断
 		CHECK_DOOR_CLOSE_FLAG (11);
 		if (g_counter.counter_fin_signal_delay > 0){
 			g_counter.counter_fin_signal_delay--;
-			if (g_counter.counter_fin_signal_delay == 0){
+			if (g_counter.counter_fin_signal_delay == 0){//数粒完成信号
 				if (REJECT_FLAG == 0){
 					g_counter.total_reject++;
 				}else{

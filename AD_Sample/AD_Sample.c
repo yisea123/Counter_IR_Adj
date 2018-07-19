@@ -63,6 +63,7 @@ void counter_reset (void)
 #if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
+	uint32_t current_ticks;
 	OS_ENTER_CRITICAL();
 	g_counter.total_count = 0;
 	g_counter.pre_count = 0;
@@ -70,6 +71,7 @@ void counter_reset (void)
 	g_counter.total_good = 0;
 	g_counter.rej_flag = 0;
 	g_counter.rej_flag_buf.data_hl = 0;
+	current_ticks = get_sys_run_time ();
 	CHANEL_INIT(0);
 	CHANEL_INIT(1);
 	CHANEL_INIT(2);
@@ -662,7 +664,9 @@ void start_vibrate (void)
 #if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
+	uint32_t current_ticks;
 	OS_ENTER_CRITICAL();
+	current_ticks = get_sys_run_time ();
 	OPEN_DOOR(0);
 	OPEN_DOOR(1);
 	OPEN_DOOR(2);
@@ -810,6 +814,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			if (_ch->wave_down_flag > WAVE_DOWN){//检测到有药粒
 				_ch->length_ticks = get_sys_run_time ();
 				_ch->interval.data_hl = _ch->length_ticks - _ch->interval_ticks;
+				_ch->close_switch_interval.data_hl = _ch->length_ticks - _ch->close_switch_interval_ticks;
 				_ch->piece_in_time = 0;
 				_ch->piece_in = 1;
 				///////////////////////////////////////////////////////////////////////////////////////////
@@ -831,6 +836,13 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 						if (_ch->close_interval.data_hl < g_counter.set_min_interval.data_hl){/*小料门关闭时药粒间隔太小*/
 							g_counter.rej_flag_buf.data.h |= REJ_TOO_CLOSE;
 							g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE;
+							REJECT_FLAG = 0;
+							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
+							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
+						}
+						if (_ch->close_switch_interval.data_hl < g_counter.set_door_switch_interval){/*小料门开关间隔太小*/
+							g_counter.rej_flag_buf.data.h |= REJ_TOO_FAST;
+							g_counter.rej_flag_buf.data.l |= REJ_TOO_FAST;
 							REJECT_FLAG = 0;
 							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
 							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志

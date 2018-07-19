@@ -274,6 +274,7 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(536, g_counter.std_ref_value_old);
 	MAP_MODBUS_HOLDREG(537, g_counter.std_ref_value);
 	MAP_MODBUS_HOLDREG(538, g_counter.std_ref_value_offset);
+	MAP_MODBUS_HOLDREG(539, g_counter.set_door_switch_interval);
 	//
 	for (i = 0; i < 8; i++){
 		MAP_MODBUS_HOLDREG(1024 + i, AD_DMA_buf.AD_Value_0[i][0]);

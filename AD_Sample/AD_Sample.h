@@ -64,6 +64,7 @@
 #define REJ_TOO_BIG 	0x0008 //面积太大
 #define REJ_TOO_SMALL 	0x0010 //面积太小
 #define REJ_TOO_CLOSE 	0x0020 //关门间隔太小
+#define REJ_TOO_FAST 	0x0040 //开关间隔太小
 
 
 
@@ -73,6 +74,7 @@
 	g_counter.last_piece_chanel_id = 0xFFFF; \
 	g_counter.ch[CH].counter_state = NORMAL_COUNT; \
 	DOOR_##CH = 1; \
+	g_counter.ch[CH].close_switch_interval_ticks = current_ticks; \
 }
 #define CHANEL_INIT(CH) { \
 	OPEN_DOOR(CH) \
@@ -109,7 +111,8 @@
 		g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*保存最后一次剔除原因*/ \
 		g_counter.rej_flag_clear_delay = 20000;/*设定2秒后清零剔除标志*/ \
 	} \
-	g_counter.counter_fin_signal_delay = g_counter.set_min_interval.data_hl+20; \
+	g_counter.counter_fin_signal_delay = ((g_counter.set_door_switch_interval > g_counter.set_min_interval.data_hl) ? \
+																				 g_counter.set_door_switch_interval : g_counter.set_min_interval.data_hl) + 20; \
 }
 
 #define COUNTER_FINISH_OP() { \
@@ -200,6 +203,8 @@ typedef struct{
 	s_32 max_close_interval;
 	s_32 min_interval;
 	s_32 max_interval;
+	s_32 close_switch_interval;
+	uint32_t close_switch_interval_ticks;
 	uint32_t interval_ticks;
 	uint32_t length_ticks;
 }s_chanel_info;
@@ -222,13 +227,17 @@ typedef struct{
 	U16 set_watch_ch;
 	U32 dma_buf_addr;
 	U32 buf_addr;
-	u16 (* AD_buf_p)[CHANEL_NUM];
+	U16 (* AD_buf_p)[CHANEL_NUM];
 	U16 counter_step;
 	U16 set_std_denumerator;
 	U16 set_std_numerator;
 	U16 set_wave_down_flag;
 	U16 set_wave_up_flag;
 	U16 set_wave_up_value;
+	U16 set_door_switch_interval;
+	U16 std_ref_value_old;
+	U16 std_ref_value;
+	U16 std_ref_value_offset;
 	U16 counter_fin_signal_delay;
 	U16 last_piece_chanel_id;//最后一粒所在的通道号
 	U16 rej_flag;
@@ -237,7 +246,7 @@ typedef struct{
 	s_32 area_sum;//截面积
 	s_32 min_area_sum;
 	s_32 max_area_sum;
-	s_32 set_min_len;
+	s_32 set_min_len; 
 	s_32 set_max_len;
 	s_32 set_min_interval;
 	s_32 set_max_interval;
@@ -255,9 +264,6 @@ typedef struct{
 	U16 set_door_n_close_delay[CHANEL_NUM];
 	U16 system_states;
 	U16 view_IR_DA_value[CHANEL_NUM];
-	U16 std_ref_value_old;
-	U16 std_ref_value;
-	U16 std_ref_value_offset;
 }s_counter_info;
 
 
