@@ -91,6 +91,7 @@
 	g_counter.ch[CH].len.data_hl = 0; \
 	g_counter.ch[CH].area_sum.data_hl = 0; \
 	g_counter.ch[CH].cur_count = 0; \
+	g_counter.total_count_sum.data_hl = 0; \
 }
 #define CHANEL_DATA_CLEAR(CH) { \
 	g_counter.ch[CH].ad_max = 0; \
@@ -112,7 +113,7 @@
 		g_counter.rej_flag_clear_delay = 20000;/*设定2秒后清零剔除标志*/ \
 	} \
 	g_counter.counter_fin_signal_delay = ((g_counter.set_door_switch_interval > g_counter.set_min_interval.data_hl) ? \
-																				 g_counter.set_door_switch_interval : g_counter.set_min_interval.data_hl) + 20; \
+																				 g_counter.set_door_switch_interval : g_counter.set_min_interval.data_hl) + 200; \
 }
 
 #define COUNTER_FINISH_OP() { \
@@ -245,6 +246,7 @@ typedef struct{
 	U16 rej_flag;
 	U16 rej_flag_clear_delay;
 	s_32 rej_flag_buf;
+	s_32 total_count_sum;
 	s_32 area_sum;//截面积
 	s_32 min_area_sum;
 	s_32 max_area_sum;

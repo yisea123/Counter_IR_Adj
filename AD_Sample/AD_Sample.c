@@ -691,8 +691,7 @@ void start_vibrate (void)
 		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再启动振动器
 		OS_ENTER_CRITICAL();//<-------------------------- 1
 	}
-	if ((g_counter.rej_flag_buf.data.l & REJ_TOO_CLOSE) || 
-			(g_counter.rej_flag_buf.data.l & REJ_DOOR_SWITCH_TOO_FAST)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号
+	if ((g_counter.rej_flag_buf.data.l != 0)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号
 		if (g_counter.pre_count < g_counter.set_count){
 			g_counter.pre_count = g_counter.set_count;
 		}
@@ -706,7 +705,7 @@ void start_vibrate (void)
 		OS_EXIT_CRITICAL();
 	}else{//预数粒多数或者刚好数够
 		OS_EXIT_CRITICAL();
-		delay_ms (500);//延时一段时间再给信号
+		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再给信号
 		OS_ENTER_CRITICAL();
 		g_counter.total_count = g_counter.pre_count;
 		g_counter.pre_count = 0;
@@ -833,9 +832,14 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 				//计数
 				///////////////////////////////////////////////////////////////////////////////////////////
 				_ch->cur_count++;
+				g_counter.total_count_sum.data_hl++;
 				if (_ch->counter_state == NORMAL_COUNT){//通道正常数粒状态
 					if ((g_counter.total_count) < g_counter.set_count){//判断当前这粒是属于哪一瓶
-						g_counter.total_count++;
+						if (g_counter.rej_flag_buf.data.l != 0){//如果要剔除，就不用继续数了
+							g_counter.total_count = g_counter.set_count;
+						}else{
+							g_counter.total_count++;
+						}
 						if (g_counter.total_count >= g_counter.set_count){//当前这一瓶的最后一粒
 							g_counter.last_piece_chanel_id = _ch_id;
 							if (g_counter.pre_count >= g_counter.set_pre_count){
@@ -876,6 +880,9 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 						}
 						_ch->cur_count = 1;
 						g_counter.pre_count++;
+						if (g_counter.rej_flag_buf.data.h != 0){
+							pause_vibrate();
+						}
 						if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
 							pause_vibrate();
 						}
@@ -888,6 +895,9 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 					}
 				}else{// if (_ch->counter_state == PRE_COUNT){//通道预数粒状态
 					g_counter.pre_count++;
+					if (g_counter.rej_flag_buf.data.h != 0){
+						pause_vibrate();
+					}
 					if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
 						pause_vibrate();
 					}

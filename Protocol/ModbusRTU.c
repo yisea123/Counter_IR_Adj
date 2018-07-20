@@ -252,8 +252,8 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(496, g_counter.max_area_sum.data.l);
 	MAP_MODBUS_HOLDREG(497, g_counter.min_area_sum.data.h);
 	MAP_MODBUS_HOLDREG(498, g_counter.min_area_sum.data.l);
-	MAP_MODBUS_HOLDREG(499, g_counter.max_close_door_interval.data.h);
-	MAP_MODBUS_HOLDREG(500, g_counter.max_close_door_interval.data.l);
+	MAP_MODBUS_HOLDREG(499, g_counter.total_count_sum.data.h);
+	MAP_MODBUS_HOLDREG(500, g_counter.total_count_sum.data.l);
 	MAP_MODBUS_HOLDREG(501, g_counter.min_close_door_interval.data.h);
 	MAP_MODBUS_HOLDREG(502, g_counter.min_close_door_interval.data.l);
 	MAP_MODBUS_HOLDREG(503, g_counter.max_len.data.h);
