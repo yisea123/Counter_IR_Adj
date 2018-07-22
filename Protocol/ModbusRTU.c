@@ -140,7 +140,7 @@ void Modbus_RegMap(void)
 
 	MAP_MODBUS_HOLDREG(20, chanel_pos_index);
 	MAP_MODBUS_HOLDREG(21, Modbus_com_error);
-	MAP_MODBUS_HOLDREG(22, g_counter.total_count);
+	MAP_MODBUS_HOLDREG(22, g_counter.normal_count);
 	MAP_MODBUS_HOLDREG(23, g_counter.pre_count);
 	MAP_MODBUS_HOLDREG(24, g_counter.counter_step);
 	MAP_MODBUS_HOLDREG(25, g_counter.total_reject);
@@ -155,8 +155,8 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 3, 	g_counter.set_adc_mode);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 4, 	g_counter.set_max_interval.data.h);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 5, 	g_counter.set_max_interval.data.l);
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 6, 	g_counter.set_min_interval.data.h);
-	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 7, 	g_counter.set_min_interval.data.l);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 6, 	g_counter.set_door_close_interval.data.h);
+	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 7, 	g_counter.set_door_close_interval.data.l);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 8, 	g_counter.set_max_len.data.h);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 9, 	g_counter.set_max_len.data.l);
 	MAP_MODBUS_HOLDREG(MODBUS_SAVE_DATA_START + 10, g_counter.set_min_len.data.h);
@@ -275,8 +275,9 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(537, g_counter.std_ref_value);
 	MAP_MODBUS_HOLDREG(538, g_counter.std_ref_value_offset);
 	MAP_MODBUS_HOLDREG(539, g_counter.set_door_switch_interval);//小料门开关间隔参数
-	MAP_MODBUS_HOLDREG(540, g_counter.set_door_switch_delay);//小料门开关间隔关延时
+	MAP_MODBUS_HOLDREG(540, g_counter.set_door_close_ex_delay);//小料门开关间隔关延时
 	MAP_MODBUS_HOLDREG(541, g_counter.set_vib_restart_delay);//重启振动器延时
+	MAP_MODBUS_HOLDREG(542, g_counter.set_pre_count_threshold);//预数粒过冲阈值
 	//
 	for (i = 0; i < 8; i++){
 		MAP_MODBUS_HOLDREG(1024 + i, AD_DMA_buf.AD_Value_0[i][0]);
@@ -313,6 +314,19 @@ void Modbus_RegMap(void)
 	}
 	for (i = 0; i < 8; i++){
 		MAP_MODBUS_HOLDREG(1112 + i, AD_DMA_buf.AD_Value_0[i][11]);
+	}
+	
+	for (i = 0; i < 12; i++){
+		MAP_MODBUS_HOLDREG(1120 + i * 2, g_counter.ch[i].door_switch_interval.data.h);
+		MAP_MODBUS_HOLDREG(1121 + i * 2, g_counter.ch[i].door_switch_interval.data.l);
+	}
+	for (i = 0; i < 12; i++){
+		MAP_MODBUS_HOLDREG(1144 + i * 2, g_counter.ch[i].min_door_switch_interval.data.h);
+		MAP_MODBUS_HOLDREG(1145 + i * 2, g_counter.ch[i].min_door_switch_interval.data.l);
+	}
+	for (i = 0; i < 12; i++){
+		MAP_MODBUS_HOLDREG(1168 + i * 2, g_counter.ch[i].max_door_switch_interval.data.h);
+		MAP_MODBUS_HOLDREG(1169 + i * 2, g_counter.ch[i].max_door_switch_interval.data.l);
 	}
 	
 
@@ -401,6 +415,12 @@ int save_para (int flag)
 void check_data (void)
 {
 	int i;
+	if (g_counter.set_pre_count_threshold > g_counter.set_count_new){
+		g_counter.set_pre_count_threshold = 0;
+	}
+	if (g_counter.set_count_new < g_counter.set_pre_count_new){
+		g_counter.set_pre_count_new = 0;
+	}
 	if ((g_counter.set_std_numerator < 1) || (g_counter.set_std_numerator > 100)){
 		g_counter.set_std_numerator = 5;
 	}
@@ -419,8 +439,8 @@ void check_data (void)
 	if ((g_counter.set_adc_mode < 1) || (g_counter.set_adc_mode > 7)){
 		g_counter.set_adc_mode = 3;
 	}
-	if (g_counter.set_min_interval.data_hl < 5){
-		g_counter.set_min_interval.data_hl = 5;
+	if (g_counter.set_door_close_interval.data_hl < 5){
+		g_counter.set_door_close_interval.data_hl = 5;
 	}
 	for (i = 0; i < CHANEL_NUM; i++){
 		if (g_counter.set_door_close_delay == 0){

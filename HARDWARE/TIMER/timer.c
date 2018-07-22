@@ -52,7 +52,7 @@ void TIM2_Int_Init(u16 arr,u16 psc)
 u16 tim2_irq_process_time = 0;
 #define CHECK_DOOR_CLOSE_FLAG(CH) if (g_counter.ch[CH].door_close_delay > 0){ \
 				g_counter.ch[CH].door_close_delay--; \
-				if ((g_counter.ch[CH].door_close_delay == 0) && (g_counter.counter_state == PRE_COUNT)){ \
+				if ((g_counter.ch[CH].door_close_delay == 0)){ \
 					DOOR_##CH = 0; \
 				} \
 			}
@@ -66,6 +66,9 @@ u16 tim2_irq_process_time = 0;
 uint32_t sys_run_time	= 0;//100us的精度
 void TIM2_IRQHandler(void)   //TIM2中断
 {
+#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
+    OS_CPU_SR  cpu_sr = 0u;
+#endif
 	unsigned long long tick_old;
 	tick_old = get_tim5_ticks();
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +93,9 @@ void TIM2_IRQHandler(void)   //TIM2中断
 			if ((g_counter.rej_flag_buf.data.l & REJ_TOO_CLOSE) || 
 					(g_counter.rej_flag_buf.data.l & REJ_DOOR_SWITCH_TOO_FAST)){//这两种原因，再额外延时一段时间，等振动器停下来，再给完成信号
 				g_counter.counter_fin_signal_delay = 10000;//单位是 0.1ms
-				g_counter.rej_flag_buf.data.l = 0;
+				OS_ENTER_CRITICAL();//关中断<-------------------------- 1
+				g_counter.rej_flag_buf.data.l = 0;//可能会被更高级的中断打断，所以要先关中断
+				OS_EXIT_CRITICAL();//开中断<--------------------------- 1
 			}
 			if (g_counter.counter_fin_signal_delay == 0){//数粒完成信号
 				if (REJECT_FLAG == 0){

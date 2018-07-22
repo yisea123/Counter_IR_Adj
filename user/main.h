@@ -29,6 +29,7 @@ typedef double         fp64;                    /* double precision floating poi
 #include "timer.h"
 #include "sys.h"
 #include "AD_Sample.h"
+#include "Counter_system.h"
 #include "dac.h"
 #include "delay.h"
 #include "usart.h"

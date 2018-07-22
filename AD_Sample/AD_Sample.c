@@ -1,7 +1,6 @@
 #include "main.h"
 
 
-s_counter_info g_counter;
 
 vu16 process_rdy = PROCESS_RDY + PROCESS_RDY;
 
@@ -13,122 +12,6 @@ u16 After_filter[CHANEL_NUM]; //用来存放求平均值之后的结果
 vu16 Detect_Buf[DETECTG_BUF_SIZE];
 s_buf AD_buff;
 
-
-
-
-s_counter_env counter_env;
-
-void counter_init (void)
-{
-	int i, j;
-	S8 *p = (S8 *) &g_counter;
-	for (i = 0; i < sizeof(s_counter_info); i++)
-	{
-		*(p++) = 0;
-	}
-
-	memset ((void *)Detect_Buf, 0, sizeof(Detect_Buf));
-	memset ((void *)After_filter, 0, sizeof(After_filter));
-	memset ((void *)&AD_DMA_buf, 0, sizeof(AD_DMA_buf));
-
-	COUNT_COMPLETE = 1;
-
-	g_counter.AD_buf_p = 0;
-	g_counter.AD_use_buf_index = 0;
-	g_counter.counter_state = COUNTER_IDLE;
-
-	for (i = 0; i < CHANEL_NUM; i++){
-		g_counter.ch[i].ad_min = 0xFFFF;
-		g_counter.ch[i].ad_max = 0;
-		g_counter.ch[i].ad_averaged_value = 0;
-		for (j = 0; j < AD_FITTER_BUFF_SIZE; j++){
-			g_counter.ch[i].ad_fitter_buff[j] = 0;
-		}
-	}
-
-	g_counter.sim_ad_value = 35000;
-
-	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_door_interval.data_hl = 0;
-	g_counter.max_area_sum.data_hl = 0;
-	g_counter.min_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
-}
-
-
-void counter_reset (void)
-{
-#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
-    OS_CPU_SR  cpu_sr = 0u;
-#endif
-	uint32_t current_ticks;
-	OS_ENTER_CRITICAL();
-	g_counter.total_count = 0;
-	g_counter.pre_count = 0;
-	g_counter.total_reject = 0;
-	g_counter.total_good = 0;
-	g_counter.rej_flag = 0;
-	g_counter.rej_flag_buf.data_hl = 0;
-	current_ticks = get_sys_run_time ();
-	CHANEL_INIT(0);
-	CHANEL_INIT(1);
-	CHANEL_INIT(2);
-	CHANEL_INIT(3);
-	CHANEL_INIT(4);
-	CHANEL_INIT(5);
-	CHANEL_INIT(6);
-	CHANEL_INIT(7);
-	CHANEL_INIT(8);
-	CHANEL_INIT(9);
-	CHANEL_INIT(10);
-	CHANEL_INIT(11);
-	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_door_interval.data_hl = 0;
-	g_counter.max_area_sum.data_hl = 0;
-	g_counter.min_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
-	stop_vibrate ();
-	REJECT_FLAG = 1;//剔除标志
-	PRE_COUNT_FLAG = 1;
-	g_counter.counter_step = 0;
-	g_counter.counter_state = COUNTER_IDLE;
-	COUNT_COMPLETE = 0;
-	g_counter.complete_count = 0;//数粒完成信号
-	g_counter.complete_res = 0;//数粒完成信号
-	OS_EXIT_CRITICAL();
-}
-void counter_data_clear (void)
-{
-#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
-    OS_CPU_SR  cpu_sr = 0u;
-#endif
-	OS_ENTER_CRITICAL();
-	CHANEL_DATA_CLEAR(0);
-	CHANEL_DATA_CLEAR(1);
-	CHANEL_DATA_CLEAR(2);
-	CHANEL_DATA_CLEAR(3);
-	CHANEL_DATA_CLEAR(4);
-	CHANEL_DATA_CLEAR(5);
-	CHANEL_DATA_CLEAR(6);
-	CHANEL_DATA_CLEAR(7);
-	CHANEL_DATA_CLEAR(8);
-	CHANEL_DATA_CLEAR(9);
-	CHANEL_DATA_CLEAR(10);
-	CHANEL_DATA_CLEAR(11);
-	g_counter.max_len.data_hl = 0;
-	g_counter.max_close_door_interval.data_hl = 0;
-	g_counter.max_area_sum.data_hl = 0;
-	g_counter.min_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_len.data_hl = 0xFFFFFFFF;
-	g_counter.min_close_door_interval.data_hl = 0xFFFFFFFF;
-	g_counter.min_area_sum.data_hl = 0xFFFFFFFF;
-
-	OS_EXIT_CRITICAL();
-}
 
 
 void AD_GPIO_Configuration(void)
@@ -447,7 +330,6 @@ void AD1_DMA_Configuration(void)
 
 }
 int counter_process_state;
-void counter_process (void);
 //============================================
 //函数名称:DMA1_Channel1_IRQHandler
 //功能描述:DMA中断 对AD采集值平均滤波
@@ -654,75 +536,6 @@ void set_std_offset (uint16 C)
 #endif
 
 
-void pause_vibrate (void)
-{
-	VIBRATE_SWITCH = 1;
-}
-
-void start_vibrate (void)
-{
-#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
-    OS_CPU_SR  cpu_sr = 0u;
-#endif
-	uint32_t current_ticks;
-	OS_ENTER_CRITICAL();//<-------------------------- 1
-	current_ticks = get_sys_run_time ();
-	OPEN_DOOR(0);
-	OPEN_DOOR(1);
-	OPEN_DOOR(2);
-	OPEN_DOOR(3);
-	OPEN_DOOR(4);
-	OPEN_DOOR(5);
-	OPEN_DOOR(6);
-	OPEN_DOOR(7);
-	OPEN_DOOR(8);
-	OPEN_DOOR(9);
-	OPEN_DOOR(10);
-	OPEN_DOOR(11);
-	g_counter.rej_flag_buf.data_hl >>= 16;
-	///////////////////////////////////////////////////////
-	//改参数后下一瓶生效///////////////////////////////////
-	g_counter.set_count = g_counter.set_count_new;
-	g_counter.set_pre_count = g_counter.set_pre_count_new;
-	///////////////////////////////////////////////////////
-	if ((g_counter.set_count > g_counter.pre_count) && 
-			(g_counter.set_count - g_counter.pre_count < 40)){//判断预数粒是否很接近装量
-		OS_EXIT_CRITICAL();//<-------------------------- 
-		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再启动振动器
-		OS_ENTER_CRITICAL();//<-------------------------- 1
-	}
-	if ((g_counter.rej_flag_buf.data.l != 0)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号
-		if (g_counter.pre_count < g_counter.set_count){
-			g_counter.pre_count = g_counter.set_count;
-		}
-	}
-	if (g_counter.pre_count < g_counter.set_count){
-		g_counter.total_count = g_counter.pre_count;
-		g_counter.pre_count = 0;
-		g_counter.counter_state = NORMAL_COUNT;
-		PRE_COUNT_FLAG = 1;
-		VIBRATE_SWITCH = 0;
-		OS_EXIT_CRITICAL();
-	}else{//预数粒多数或者刚好数够
-		OS_EXIT_CRITICAL();
-		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再给信号
-		OS_ENTER_CRITICAL();
-		g_counter.total_count = g_counter.pre_count;
-		g_counter.pre_count = 0;
-		g_counter.counter_state = PRE_COUNT;
-		SEND_COUNTER_FIN_SIGNAL ();
-		if (g_counter.pre_count < g_counter.set_pre_count){//达到设定的预数
-			VIBRATE_SWITCH = 0;
-		}
-		OS_EXIT_CRITICAL();
-	}
-}
-void stop_vibrate (void)
-{
-	VIBRATE_SWITCH = 1;
-}
-
-
 int AD_Sample_init (void)
 {
 	AD_GPIO_Configuration ();
@@ -823,103 +636,11 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			}
 
 			if (_ch->wave_down_flag > WAVE_DOWN){//检测到有药粒
-				_ch->length_ticks = get_sys_run_time ();
-				_ch->interval.data_hl = _ch->length_ticks - _ch->interval_ticks;
-				_ch->door_switch_interval.data_hl = _ch->length_ticks - _ch->door_close_ticks;
+				_ch->length_start_ticks = get_sys_run_time ();//记录药粒进入电眼的时间戳，用于后面的长度计算
 				_ch->piece_in_time = 0;
 				_ch->piece_in = 1;
-				///////////////////////////////////////////////////////////////////////////////////////////
-				//计数
-				///////////////////////////////////////////////////////////////////////////////////////////
-				_ch->cur_count++;
-				g_counter.total_count_sum.data_hl++;
-				if (_ch->counter_state == NORMAL_COUNT){//通道正常数粒状态
-					if ((g_counter.total_count) < g_counter.set_count){//判断当前这粒是属于哪一瓶
-						if (g_counter.rej_flag_buf.data.l != 0){//如果要剔除，就不用继续数了
-							g_counter.total_count = g_counter.set_count;
-						}else{
-							g_counter.total_count++;
-						}
-						if (g_counter.total_count >= g_counter.set_count){//当前这一瓶的最后一粒
-							g_counter.last_piece_chanel_id = _ch_id;
-							if (g_counter.pre_count >= g_counter.set_pre_count){
-								pause_vibrate();
-							}
-						}
-					}else{//已经达到设定的计数量，开始预数
-						_ch->door_close_delay = g_counter.set_door_n_close_delay[_ch_id];/*小料门关闭延时*/
-						_ch->close_door_interval.data_hl = _ch->interval.data_hl;
-						if (_ch->close_door_interval.data_hl < g_counter.set_min_interval.data_hl){/*小料门关闭时药粒间隔太小*/
-							pause_vibrate();//因为要剔除了，没必要再继续数粒，故停止振动器
-							g_counter.rej_flag_buf.data.h |= REJ_TOO_CLOSE;
-							g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE;
-							REJECT_FLAG = 0;
-							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
-							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
-						}
-						if (_ch->door_switch_interval.data_hl < g_counter.set_door_switch_interval){/*小料门开关间隔太小*/
-							pause_vibrate();//因为要剔除了，没必要再继续数粒，故停止振动器
-							_ch->door_close_delay += g_counter.set_door_switch_delay;//开关频率太快，需额外加一段延时等待料门完全打开
-							g_counter.rej_flag_buf.data.h |= REJ_DOOR_SWITCH_TOO_FAST;
-							g_counter.rej_flag_buf.data.l |= REJ_DOOR_SWITCH_TOO_FAST;
-							REJECT_FLAG = 0;
-							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
-							g_counter.rej_flag_clear_delay = 20000;//设定2秒后清零剔除标志
-						}
-						if (_ch->close_door_interval.data_hl > _ch->max_close_door_interval.data_hl){
-							_ch->max_close_door_interval.data_hl = _ch->close_door_interval.data_hl;
-							if (_ch->max_close_door_interval.data_hl > g_counter.max_close_door_interval.data_hl){
-								g_counter.max_close_door_interval.data_hl = _ch->max_close_door_interval.data_hl;
-							}
-						}
-						if (_ch->close_door_interval.data_hl < _ch->min_close_door_interval.data_hl){
-							_ch->min_close_door_interval.data_hl = _ch->close_door_interval.data_hl;
-							if (_ch->min_close_door_interval.data_hl < g_counter.min_close_door_interval.data_hl){
-								g_counter.min_close_door_interval.data_hl = _ch->min_close_door_interval.data_hl;
-							}
-						}
-						_ch->cur_count = 1;
-						g_counter.pre_count++;
-						if (g_counter.rej_flag_buf.data.h != 0){
-							pause_vibrate();
-						}
-						if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
-							pause_vibrate();
-						}
-						if (g_counter.pre_count > g_counter.set_count){//预数超过设定数
-							g_counter.rej_flag_buf.data.h |= REJ_TOO_MORE;
-						}
-						_ch->counter_state = PRE_COUNT;
-						g_counter.counter_state = PRE_COUNT;//数粒机进入预数粒状态
-						PRE_COUNT_FLAG = 0;
-					}
-				}else{// if (_ch->counter_state == PRE_COUNT){//通道预数粒状态
-					g_counter.pre_count++;
-					if (g_counter.rej_flag_buf.data.h != 0){
-						pause_vibrate();
-					}
-					if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
-						pause_vibrate();
-					}
-					if (g_counter.pre_count > g_counter.set_count){//预数超过设定数
-						g_counter.rej_flag_buf.data.h |= REJ_TOO_MORE;
-					}
-				}
 				_ch->wave_down_flag = 0;
 				_ch->ad_value_min_temp = _ad_value_;
-				if (_ch->interval.data_hl > _ch->max_interval.data_hl ){
-					if ( _ch->max_interval.data_hl > 0){
-						_ch->max_interval.data_hl = _ch->interval.data_hl;
-					}else{
-						_ch->max_interval.data_hl = 1;//通道第一粒出现
-					}
-				}
-				if (_ch->interval.data_hl < _ch->min_interval.data_hl){
-					_ch->min_interval.data_hl = _ch->interval.data_hl;
-					if (_ch->min_interval.data_hl < g_counter.min_interval.data_hl){
-						g_counter.min_interval.data_hl = _ch->min_interval.data_hl;
-					}
-				}
 				_ch->process_step = 16;
 				///////////////////////////////////////////////////////////////////////////////////////////
 			}
@@ -958,62 +679,74 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			}
 
 			if (_ch->wave_up_flag > WAVE_UP){
-				_ch->interval_ticks = get_sys_run_time ();
-				_ch->len.data_hl = _ch->interval_ticks - _ch->length_ticks;
-				if (_ch->len.data_hl > _ch->max_len.data_hl){
-					_ch->max_len.data_hl = _ch->len.data_hl;
-					if (_ch->max_len.data_hl > g_counter.max_len.data_hl){
-						g_counter.max_len.data_hl = _ch->max_len.data_hl;
-					}
+				/*药粒出了检测区，更新药粒相关信息****************************************************************/
+				UPDATA_PIECE_INFO();
+				///////////////////////////////////////////////////////////////////////////////////////////
+				//计数/////////////////////////////////////////////////////////////////////////////////////
+				_ch->cur_count++;
+				g_counter.total_count_sum.data_hl++;
+				///////////////////////////////////////////////////////////////////////////////////////////
+				switch (_ch->counter_state)
+				{
+					case NORMAL_COUNT://通道正常数粒状态
+						CHECK_NORMAL_COUNT_LENGTH();
+						CHECK_NORMAL_COUNT_AREA();
+						if (g_counter.rej_flag_buf.data.l != 0){//如果要剔除，就不用继续数了
+							g_counter.normal_count = g_counter.set_count;
+						}else{
+							g_counter.normal_count++;
+						}
+						if (g_counter.normal_count >= g_counter.set_count){//当前这一瓶的最后一粒
+							SET_ALL_CHANEL_STATUS(SEPARATE_PRE_COUNT);//通知其他通道下一颗要进行分药动作
+							g_counter.last_piece_chanel_id = _ch_id;//记录发出通知的通道ID
+							SEND_COUNTER_FIN_SIGNAL ();//数粒完成,发送数粒完成信号
+							if (g_counter.pre_count >= g_counter.set_pre_count){
+								pause_vibrate();
+							}
+						}
+						break;
+					case SEPARATE_PRE_COUNT://每个通道的下一瓶的第一颗药，需要小料门分药动作
+						_ch->door_close_delay = g_counter.set_door_n_close_delay[_ch_id];/*小料门关闭延时*/
+						CHECK_PRE_COUNT_LENGTH();
+						CHECK_PRE_COUNT_AREA();
+						CHECK_PRE_COUNT_CLOSE_DOOR_INTERVAL ();
+						CHECK_PRE_COUNT_DOOR_SWITCH_INTERVAL();
+						_ch->cur_count = 1;//每个通道的下一瓶的第一颗药
+						g_counter.pre_count++;
+						if (g_counter.rej_flag_buf.data.l != 0){//出现关门间隔太小和料门开关间隔太小需要补充前一瓶的剔除信号
+							REJECT_FLAG = 0;
+							g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*更新剔除原因*/
+						}
+						if (g_counter.rej_flag_buf.data.h != 0){
+							pause_vibrate();
+						}
+						if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
+							pause_vibrate();
+						}
+						if (g_counter.pre_count > g_counter.set_count){//预数超过设定数
+							g_counter.rej_flag_buf.data.h |= REJ_TOO_MORE;
+						}
+						_ch->counter_state = PRE_COUNT;
+						PRE_COUNT_FLAG = 0;
+						break;
+					case PRE_COUNT://通道预数粒状态
+						CHECK_PRE_COUNT_LENGTH();
+						CHECK_PRE_COUNT_AREA();
+						g_counter.pre_count++;
+						if (g_counter.rej_flag_buf.data.h != 0){//如果要剔除，就不用继续数了
+							pause_vibrate();
+						}
+						if (g_counter.pre_count >= g_counter.set_pre_count){//达到设定的预数
+							pause_vibrate();
+						}
+						if (g_counter.pre_count > g_counter.set_count){//预数超过设定数
+							g_counter.rej_flag_buf.data.h |= REJ_TOO_MORE;//更新剔除原因
+						}
+						break;
+					default:
+						break;
 				}
-				if (_ch->len.data_hl < _ch->min_len.data_hl){
-					_ch->min_len.data_hl = _ch->len.data_hl;
-					if (_ch->min_len.data_hl < g_counter.min_len.data_hl){
-						g_counter.min_len.data_hl = _ch->min_len.data_hl;
-					}
-				}
-
-				_ch->area_sum.data_hl = ((g_counter.ch[_ch_id].std_v - _ch->ad_value_min) *_ch->len.data_hl) / 20;
-				if (_ch->area_sum.data_hl > _ch->max_area_sum.data_hl){
-					_ch->max_area_sum.data_hl = _ch->area_sum.data_hl;
-					if (_ch->max_area_sum.data_hl > g_counter.max_area_sum.data_hl){
-						g_counter.max_area_sum.data_hl = _ch->max_area_sum.data_hl;
-					}
-				}
-				if (_ch->area_sum.data_hl < _ch->min_area_sum.data_hl){
-					_ch->min_area_sum.data_hl = _ch->area_sum.data_hl;
-					if (_ch->min_area_sum.data_hl < g_counter.min_area_sum.data_hl){
-						g_counter.min_area_sum.data_hl = _ch->min_area_sum.data_hl;
-					}
-				}
-
-				//药粒出了检测区，更新剔除信号////////////////////////////////////////////////////////////////////////
-				if (_ch->counter_state == NORMAL_COUNT){//正常数粒
-					if (_ch->len.data_hl > g_counter.set_max_len.data_hl){ //超过设定长度
-						g_counter.rej_flag_buf.data.l |= REJ_TOO_LONG;
-					}else if (_ch->len.data_hl < g_counter.set_min_len.data_hl){//低于设定长度
-						g_counter.rej_flag_buf.data.l |= REJ_TOO_SHORT;
-					}
-					if (_ch->area_sum.data_hl > g_counter.set_max_area_sum.data_hl){ //超过设定面积
-						g_counter.rej_flag_buf.data.l |= REJ_TOO_BIG;
-					}else if (_ch->area_sum.data_hl < g_counter.set_min_area_sum.data_hl){//低于设定面积
-						g_counter.rej_flag_buf.data.l |= REJ_TOO_SMALL;
-					}
-					if (g_counter.last_piece_chanel_id == _ch_id){//当前这一瓶的最后一粒出了电眼
-						SEND_COUNTER_FIN_SIGNAL ();//数粒完成,发送数粒完成信号
-					}
-				}else if (_ch->counter_state == PRE_COUNT){//预数粒
-					if (_ch->len.data_hl > g_counter.set_max_len.data_hl){ //超过设定长度
-						g_counter.rej_flag_buf.data.h |= REJ_TOO_LONG;
-					}else if (_ch->len.data_hl < g_counter.set_min_len.data_hl){//低于设定长度
-						g_counter.rej_flag_buf.data.h |= REJ_TOO_SHORT;
-					}
-					if (_ch->area_sum.data_hl > g_counter.set_max_area_sum.data_hl){ //超过设定面积
-						g_counter.rej_flag_buf.data.h |= REJ_TOO_BIG;
-					}else if (_ch->area_sum.data_hl < g_counter.set_min_area_sum.data_hl){//低于设定面积
-						g_counter.rej_flag_buf.data.h |= REJ_TOO_SMALL;
-					}
-				}
+				////////////////////////////////////////////////////////////////////////////////
 				_ch->process_step = 6;
 				_ch->sample_size = _ch->sample_index;
 				_ch->state = CH_DATA_RDY;
@@ -1031,9 +764,6 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-//void counter_process (void)
-//{
-//}
 
 u16 counter_process_time = 0;
 u16 dma_irq_cycle = 0;

@@ -396,6 +396,11 @@ void io_task (void *pdata)
 			case 0:
 				if ((PLC_ACK == 0)){//开始启动
 					if ((COUNT_COMPLETE == 0)){//开始启动
+						if (REJECT_FLAG == 0){
+							g_counter.rej_flag_clear_delay = FLAG_CLEAR_DELAY;//设定2秒后清零剔除标志
+						}else{
+							g_counter.rej_flag = 0;
+						}
 						REJECT_FLAG = 1;//剔除标志
 						COUNT_COMPLETE = 1;//应答
 						g_counter.counter_step = 15;
