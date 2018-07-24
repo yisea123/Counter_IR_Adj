@@ -1,5 +1,6 @@
 #include "main.h"
 
+int null_temp_value;
 
 void drive_io_init (void)
 {

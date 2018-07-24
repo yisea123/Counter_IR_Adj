@@ -50,9 +50,9 @@ void TIM2_Int_Init(u16 arr,u16 psc)
 }
 //定时器2中断服务程序
 u16 tim2_irq_process_time = 0;
-#define CHECK_DOOR_CLOSE_FLAG(CH) if (g_counter.ch[CH].door_close_delay > 0){ \
-				g_counter.ch[CH].door_close_delay--; \
-				if ((g_counter.ch[CH].door_close_delay == 0)){ \
+#define CHECK_DOOR_CLOSE_FLAG(CH) if (g_counter.ch[CH].ch_door_close_delay > 0){ \
+				g_counter.ch[CH].ch_door_close_delay--; \
+				if ((g_counter.ch[CH].ch_door_close_delay == 0)){ \
 					DOOR_##CH = 0; \
 				} \
 			}

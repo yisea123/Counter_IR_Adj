@@ -49,6 +49,40 @@
 #define SET_SENSOR_EN() GPIO_SetBits(SET_SENSOR_EN_PORT, SET_SENSOR_EN_PIN)
 
 
+#define OUTPUT_PIECE_SIGNAL(CH) { \
+	CHANEL_##CH = g_counter.ch[CH].piece_in; \
+}
+#define OUTPUT_ALL_PIECE_SIGNAL() { \
+	OUTPUT_PIECE_SIGNAL(0); \
+	OUTPUT_PIECE_SIGNAL(1); \
+	OUTPUT_PIECE_SIGNAL(2); \
+	OUTPUT_PIECE_SIGNAL(3); \
+	OUTPUT_PIECE_SIGNAL(4); \
+	OUTPUT_PIECE_SIGNAL(5); \
+	OUTPUT_PIECE_SIGNAL(6); \
+	OUTPUT_PIECE_SIGNAL(7); \
+	OUTPUT_PIECE_SIGNAL(8); \
+	OUTPUT_PIECE_SIGNAL(9); \
+	OUTPUT_PIECE_SIGNAL(10); \
+	OUTPUT_PIECE_SIGNAL(11); \
+}
+
+#define COUNT_PIECES() { \
+	count_pieces (&g_counter.ch[0]); \
+	count_pieces (&g_counter.ch[1]); \
+	count_pieces (&g_counter.ch[2]); \
+	count_pieces (&g_counter.ch[3]); \
+	count_pieces (&g_counter.ch[4]); \
+	count_pieces (&g_counter.ch[5]); \
+	count_pieces (&g_counter.ch[6]); \
+	count_pieces (&g_counter.ch[7]); \
+	count_pieces (&g_counter.ch[8]); \
+	count_pieces (&g_counter.ch[9]); \
+	count_pieces (&g_counter.ch[10]); \
+	count_pieces (&g_counter.ch[11]); \
+}
+
+
 #define ENABLE_SENSOR() SET_SENSOR_EN()
 #define DISABLE_SENSOR() RESET_SENSOR_EN()
 

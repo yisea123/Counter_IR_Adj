@@ -19,7 +19,7 @@
 
 
 #define OPEN_DOOR(CH) { \
-	g_counter.ch[CH].door_close_delay = 0; \
+	g_counter.ch[CH].ch_door_close_delay = 0; \
 	DOOR_##CH = 1; \
 	g_counter.ch[CH].door_open_ticks = get_sys_run_time (); \
 }
@@ -81,7 +81,7 @@
 }
 
 #define UPDATA_PIECE_INFO() { \
- _ch->interval.data_hl  = get_sys_run_time () - _ch->interval_ticks ; \
+	_ch->interval.data_hl  = get_sys_run_time () - _ch->interval_ticks ; \
 	_ch->interval_ticks = get_sys_run_time ();/*记录新时间戳*/ \
 	if (_ch->interval.data_hl > _ch->max_interval.data_hl ){ \
 		if ( _ch->max_interval.data_hl > 0){ \
@@ -96,7 +96,6 @@
 			g_counter.min_interval.data_hl = _ch->min_interval.data_hl; \
 		} \
 	} \
-	_ch->len.data_hl = get_sys_run_time () - _ch->length_start_ticks; \
 	if (_ch->len.data_hl > _ch->max_len.data_hl){ \
 		_ch->max_len.data_hl = _ch->len.data_hl; \
 		if (_ch->max_len.data_hl > g_counter.max_len.data_hl){ \
@@ -109,7 +108,7 @@
 			g_counter.min_len.data_hl = _ch->min_len.data_hl; \
 		} \
 	} \
-	_ch->area_sum.data_hl = ((g_counter.ch[_ch_id].std_v - _ch->ad_value_min) *_ch->len.data_hl) / 20; \
+	_ch->area_sum.data_hl = ((_ch->std_v - _ch->ad_value_min) *_ch->len.data_hl) / 20; \
 	if (_ch->area_sum.data_hl > _ch->max_area_sum.data_hl){ \
 		_ch->max_area_sum.data_hl = _ch->area_sum.data_hl; \
 		if (_ch->max_area_sum.data_hl > g_counter.max_area_sum.data_hl){ \
@@ -155,7 +154,7 @@
 	/*判断是否小料门开关间隔太小*/ \
 	if (_ch->door_switch_interval.data_hl < g_counter.set_door_switch_interval){ \
 		/*开关频率太快，需额外加一段延时等待料门完全打开*/ \
-		_ch->door_close_delay += g_counter.set_door_close_ex_delay; \
+		_ch->ch_door_close_delay += g_counter.set_door_close_ex_delay; \
 		g_counter.rej_flag_buf.data_hl |= (REJ_DOOR_SWITCH_TOO_FAST | REJ_DOOR_SWITCH_TOO_FAST << 16); \
 	} \
 }
@@ -332,8 +331,11 @@ typedef struct{
 	U16 sample_size;
 	U16 state;
 	U16 piece_in;
+	U16 piece_in_new;
+	U16 piece_in_old;
 	U32 piece_in_time;
-	U16 door_close_delay;
+	U16 set_ch_door_close_delay;
+	U16 ch_door_close_delay;
 	U16 ad_fitter_index;
 	S32 ad_averaged_value;
 	uint32_t ad_fitter_buff[AD_FITTER_BUFF_SIZE];
@@ -431,6 +433,7 @@ void counter_data_clear(void);
 void start_vibrate (void);
 void stop_vibrate (void);
 void pause_vibrate (void);
+void count_pieces(s_chanel_info * _ch);
 
 
 #endif

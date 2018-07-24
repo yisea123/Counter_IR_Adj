@@ -451,6 +451,7 @@ void check_data (void)
 		}else{
 			g_counter.set_door_n_close_delay[i] = g_counter.set_door_close_delay;
 		}
+		g_counter.ch[i].set_ch_door_close_delay = g_counter.set_door_n_close_delay[i];
 		if (g_counter.std_ref_value != g_counter.std_ref_value_old){
 			//g_counter.view_IR_DA_value[i] = 150;
 		}

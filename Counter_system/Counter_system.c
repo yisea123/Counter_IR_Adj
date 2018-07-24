@@ -175,6 +175,97 @@ void stop_vibrate (void)
 //
 
 
+////////////////////////////////////////////////////////////////////////////////
+void count_pieces(s_chanel_info * _ch)
+{
+	_ch->piece_in_new = _ch->piece_in;
+	///////////////////////////////////////////////////////////
+	if ((_ch->piece_in_new == 0) && (_ch->piece_in_old == 0)){      //电眼没有药粒状态
+	}else if ((_ch->piece_in_new == 1) && (_ch->piece_in_old == 0)){//药粒刚进电眼状态
+		_ch->length_start_ticks = get_sys_run_time ();//记录药粒进入电眼的时间戳，用于后面的长度计算
+	}else if ((_ch->piece_in_new == 1) && (_ch->piece_in_old == 1)){//药粒进入电眼状态
+	}else if ((_ch->piece_in_new == 0) && (_ch->piece_in_old == 1)){//药粒刚出电眼状态
+		_ch->len.data_hl = get_sys_run_time () - _ch->length_start_ticks;
+		if (_ch->len.data_hl >= g_counter.set_min_len.data_hl){//长度大于设定值最小长度才能计数
+			/*药粒出了检测区，更新药粒相关信息****************************************************************/
+			UPDATA_PIECE_INFO(); 
+			///////////////////////////////////////////////////////////////////////////////////////////
+			//计数/////////////////////////////////////////////////////////////////////////////////////
+			_ch->cur_count++;
+			g_counter.total_count_sum.data_hl++;
+			///////////////////////////////////////////////////////////////////////////////////////////
+			switch (_ch->counter_state)
+			{
+				case NORMAL_COUNT://通道正常数粒状态
+					if (g_counter.count.data.normal_count >= g_counter.set_count){//错误状态
+						g_counter.system_status = COUNTER_ERROR;
+					}
+					CHECK_NORMAL_COUNT_LENGTH();
+					CHECK_NORMAL_COUNT_AREA();
+					if (g_counter.rej_flag_buf.data.current_bottle != 0){//如果要剔除，就不用继续数了
+						g_counter.count.data.normal_count = g_counter.set_count;
+					}else{
+						g_counter.count.data.normal_count++;
+					}
+					if (g_counter.count.data.normal_count == g_counter.set_count){//当前这一瓶的最后一粒
+						SET_ALL_CHANEL_STATUS(SEPARATE_PRE_COUNT);//通知其他通道下一颗要进行分药动作
+	//					g_counter.last_piece_chanel_id = _ch_id;//记录发出通知的通道ID
+						SEND_COUNTER_FIN_SIGNAL (0);//数粒完成,发送数粒完成信号
+						if (g_counter.count.data.pre_count >= g_counter.set_pre_count){
+							VIBRATE_SWITCH = VIB_STOP;
+						}
+					}
+					break;
+				case SEPARATE_PRE_COUNT://每个通道的下一瓶的第一颗药，需要小料门分药动作
+					_ch->ch_door_close_delay = _ch->set_ch_door_close_delay;/*小料门关闭延时*/
+					CHECK_PRE_COUNT_LENGTH();
+					CHECK_PRE_COUNT_AREA();
+					CHECK_PRE_COUNT_CLOSE_DOOR_INTERVAL ();
+					CHECK_PRE_COUNT_DOOR_SWITCH_INTERVAL();
+					_ch->cur_count = 1;//每个通道的下一瓶的第一颗药
+					g_counter.count.data.pre_count++;
+					if (g_counter.rej_flag_buf.data.current_bottle != 0){//出现关门间隔太小和料门开关间隔太小需要补充当前这一瓶的剔除信号
+						REJECT_FLAG = 0;
+						g_counter.rej_flag = g_counter.rej_flag_buf.data.current_bottle; /*更新剔除原因*/
+					}
+					if (g_counter.rej_flag_buf.data.next_bottle != 0){
+						VIBRATE_SWITCH = VIB_STOP;
+					}
+					if (g_counter.count.data.pre_count >= g_counter.set_pre_count){//达到设定的预数
+						VIBRATE_SWITCH = VIB_STOP;
+					}
+					if (g_counter.count.data.pre_count > g_counter.set_count){//预数超过设定数
+						g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_MORE;
+					}
+					_ch->counter_state = PRE_COUNT;
+					PRE_COUNT_FLAG = 0;
+					break;
+				case PRE_COUNT://通道预数粒状态
+					CHECK_PRE_COUNT_LENGTH();
+					CHECK_PRE_COUNT_AREA();
+					g_counter.count.data.pre_count++;
+					if (g_counter.rej_flag_buf.data.next_bottle != 0){//如果要剔除，就不用继续数了
+						VIBRATE_SWITCH = VIB_STOP;
+					}
+					if (g_counter.count.data.pre_count >= g_counter.set_pre_count){//达到设定的预数
+						VIBRATE_SWITCH = VIB_STOP;
+					}
+					if (g_counter.count.data.pre_count > g_counter.set_count){//预数超过设定数
+						g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_MORE;//更新剔除原因
+					}
+					break;
+				default://错误状态
+					g_counter.system_status = STATUS_ERROR;
+					break;
+				}
+		}else{//长度小于设定值最小长度不计数
+		}
+		////////////////////////////////////////////////////////////////////////////////
+	}
+	///////////////////////////////////////////////////////////
+	_ch->piece_in_old = _ch->piece_in_new;
+}
+//
 
 
 

@@ -579,7 +579,7 @@ int save_detect_data (U16 _ch, U16 * _index, U16 _ad_value)
 
 
 
-int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
+int detect_ad_value_process(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 {
 	int r_code = 0;
 	int ad_change_v = 0;
@@ -635,11 +635,10 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 
 			if (_ch->wave_down_flag > WAVE_DOWN){//检测到有药粒
 				_ch->piece_in = 1;
-				_ch->length_start_ticks = get_sys_run_time ();//记录药粒进入电眼的时间戳，用于后面的长度计算
 				_ch->wave_down_flag = 0;
 				_ch->ad_value_min_temp = _ad_value_;
 				_ch->process_step = 16;
-				///////////////////////////////////////////////////////////////////////////////////////////
+				////////////////////////////////////////////////////////////////////////
 			}
 			break;
 		}
@@ -676,78 +675,7 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 			}
 
 			if (_ch->wave_up_flag > WAVE_UP){
-				/*药粒出了检测区，更新药粒相关信息****************************************************************/
-				UPDATA_PIECE_INFO();
-				///////////////////////////////////////////////////////////////////////////////////////////
-				//计数/////////////////////////////////////////////////////////////////////////////////////
-				_ch->cur_count++;
-				g_counter.total_count_sum.data_hl++;
-				///////////////////////////////////////////////////////////////////////////////////////////
-				switch (_ch->counter_state)
-				{
-					case NORMAL_COUNT://通道正常数粒状态
-						if (g_counter.count.data.normal_count >= g_counter.set_count){//错误状态
-							g_counter.system_status = COUNTER_ERROR;
-						}
-						CHECK_NORMAL_COUNT_LENGTH();
-						CHECK_NORMAL_COUNT_AREA();
-						if (g_counter.rej_flag_buf.data.current_bottle != 0){//如果要剔除，就不用继续数了
-							g_counter.count.data.normal_count = g_counter.set_count;
-						}else{
-							g_counter.count.data.normal_count++;
-						}
-						if (g_counter.count.data.normal_count == g_counter.set_count){//当前这一瓶的最后一粒
-							SET_ALL_CHANEL_STATUS(SEPARATE_PRE_COUNT);//通知其他通道下一颗要进行分药动作
-							g_counter.last_piece_chanel_id = _ch_id;//记录发出通知的通道ID
-							SEND_COUNTER_FIN_SIGNAL (0);//数粒完成,发送数粒完成信号
-							if (g_counter.count.data.pre_count >= g_counter.set_pre_count){
-								VIBRATE_SWITCH = VIB_STOP;
-							}
-						}
-						break;
-					case SEPARATE_PRE_COUNT://每个通道的下一瓶的第一颗药，需要小料门分药动作
-						_ch->door_close_delay = g_counter.set_door_n_close_delay[_ch_id];/*小料门关闭延时*/
-						CHECK_PRE_COUNT_LENGTH();
-						CHECK_PRE_COUNT_AREA();
-						CHECK_PRE_COUNT_CLOSE_DOOR_INTERVAL ();
-						CHECK_PRE_COUNT_DOOR_SWITCH_INTERVAL();
-						_ch->cur_count = 1;//每个通道的下一瓶的第一颗药
-						g_counter.count.data.pre_count++;
-						if (g_counter.rej_flag_buf.data.current_bottle != 0){//出现关门间隔太小和料门开关间隔太小需要补充当前这一瓶的剔除信号
-							REJECT_FLAG = 0;
-							g_counter.rej_flag = g_counter.rej_flag_buf.data.current_bottle; /*更新剔除原因*/
-						}
-						if (g_counter.rej_flag_buf.data.next_bottle != 0){
-							VIBRATE_SWITCH = VIB_STOP;
-						}
-						if (g_counter.count.data.pre_count >= g_counter.set_pre_count){//达到设定的预数
-							VIBRATE_SWITCH = VIB_STOP;
-						}
-						if (g_counter.count.data.pre_count > g_counter.set_count){//预数超过设定数
-							g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_MORE;
-						}
-						_ch->counter_state = PRE_COUNT;
-						PRE_COUNT_FLAG = 0;
-						break;
-					case PRE_COUNT://通道预数粒状态
-						CHECK_PRE_COUNT_LENGTH();
-						CHECK_PRE_COUNT_AREA();
-						g_counter.count.data.pre_count++;
-						if (g_counter.rej_flag_buf.data.next_bottle != 0){//如果要剔除，就不用继续数了
-							VIBRATE_SWITCH = VIB_STOP;
-						}
-						if (g_counter.count.data.pre_count >= g_counter.set_pre_count){//达到设定的预数
-							VIBRATE_SWITCH = VIB_STOP;
-						}
-						if (g_counter.count.data.pre_count > g_counter.set_count){//预数超过设定数
-							g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_MORE;//更新剔除原因
-						}
-						break;
-					default://错误状态
-						g_counter.system_status = STATUS_ERROR;
-						break;
-				}
-				////////////////////////////////////////////////////////////////////////////////
+				
 				_ch->process_step = 6;
 				_ch->sample_size = _ch->sample_index;
 				_ch->state = CH_DATA_RDY;
@@ -762,8 +690,6 @@ int count_piece(s_chanel_info * _ch, U16 _ad_value_, U16 _ch_id)
 	return r_code;
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
 
 
 u16 counter_process_time = 0;
@@ -844,18 +770,24 @@ void DMA1_Channel1_IRQHandler(void)
 			AD_FILTER (After_filter, g_counter.AD_buf_p, 11, SAMPLE_NUM);
 
 			//After_filter[0] = g_counter.sim_ad_value;
-			r_code += count_piece (&g_counter.ch[0], After_filter[0], 0);
-			r_code += count_piece (&g_counter.ch[1], After_filter[1], 1);
-			r_code += count_piece (&g_counter.ch[2], After_filter[2], 2);
-			r_code += count_piece (&g_counter.ch[3], After_filter[3], 3);
-			r_code += count_piece (&g_counter.ch[4], After_filter[4], 4);
-			r_code += count_piece (&g_counter.ch[5], After_filter[5], 5);
-			r_code += count_piece (&g_counter.ch[6], After_filter[6], 6);
-			r_code += count_piece (&g_counter.ch[7], After_filter[7], 7);
-			r_code += count_piece (&g_counter.ch[8], After_filter[8], 8);
-			r_code += count_piece (&g_counter.ch[9], After_filter[9], 9);
-			r_code += count_piece (&g_counter.ch[10], After_filter[10], 10);
-			r_code += count_piece (&g_counter.ch[11], After_filter[11], 11);
+			r_code += detect_ad_value_process (&g_counter.ch[0], After_filter[0], 0);
+			r_code += detect_ad_value_process (&g_counter.ch[1], After_filter[1], 1);
+			r_code += detect_ad_value_process (&g_counter.ch[2], After_filter[2], 2);
+			r_code += detect_ad_value_process (&g_counter.ch[3], After_filter[3], 3);
+			r_code += detect_ad_value_process (&g_counter.ch[4], After_filter[4], 4);
+			r_code += detect_ad_value_process (&g_counter.ch[5], After_filter[5], 5);
+			r_code += detect_ad_value_process (&g_counter.ch[6], After_filter[6], 6);
+			r_code += detect_ad_value_process (&g_counter.ch[7], After_filter[7], 7);
+			r_code += detect_ad_value_process (&g_counter.ch[8], After_filter[8], 8);
+			r_code += detect_ad_value_process (&g_counter.ch[9], After_filter[9], 9);
+			r_code += detect_ad_value_process (&g_counter.ch[10], After_filter[10], 10);
+			r_code += detect_ad_value_process (&g_counter.ch[11], After_filter[11], 11);
+						
+		#ifdef USE_AS_COUNTER 
+			COUNT_PIECES ();
+		#else
+			OUTPUT_ALL_PIECE_SIGNAL();
+		#endif
 
 			if (my_env.print == 1){
 				if (r_code != 0){
