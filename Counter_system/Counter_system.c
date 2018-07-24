@@ -52,12 +52,13 @@ void counter_reset (void)
     OS_CPU_SR  cpu_sr = 0u;
 #endif
 	OS_ENTER_CRITICAL();
-	g_counter.normal_count = 0;
-	g_counter.pre_count = 0;
+	g_counter.count.data.normal_count = 0;
+	g_counter.count.data.pre_count = 0;
 	g_counter.total_reject = 0;
 	g_counter.total_good = 0;
 	g_counter.rej_flag = 0;
 	g_counter.rej_flag_buf.data_hl = 0;
+	g_counter.system_status = RUNNING_OK;
 	CHANEL_INIT(0);
 	CHANEL_INIT(1);
 	CHANEL_INIT(2);
@@ -121,7 +122,7 @@ void counter_data_clear (void)
 //
 void pause_vibrate (void)
 {
-	VIBRATE_SWITCH = 1;
+	VIBRATE_SWITCH = VIB_STOP;
 }
 //
 void start_vibrate (void)
@@ -137,47 +138,39 @@ void start_vibrate (void)
 	g_counter.set_pre_count = g_counter.set_pre_count_new;
 	///////////////////////////////////////////////////////
 	OS_EXIT_CRITICAL();//开中断<--------------------------- 1
-	if ((g_counter.set_count > g_counter.pre_count) && 
-			((g_counter.set_count - g_counter.pre_count) < g_counter.set_pre_count_threshold)){//判断预数粒是否很接近装量
+	//*****************************************************************************************************************
+	if ((g_counter.set_count > g_counter.count.data.pre_count) && 
+			((g_counter.set_count - g_counter.count.data.pre_count) < g_counter.set_pre_count_threshold)){//判断预数粒是否很接近装量
 		if (VIBRATE_SWITCH == 0){//如果是，而且振动器已经停下来了,或者说没有药粒经过电眼了
 			delay_ms (g_counter.set_vib_restart_delay);//如果是，而且振动器已经停下来了则延时一段时间再启动振动器
 		}
 	}
-	OS_ENTER_CRITICAL();//关中断<-------------------------- 2
-	if ((g_counter.rej_flag_buf.data.h != 0)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号，此刻振动器应该处于停止状态
-		if (g_counter.pre_count < g_counter.set_count){
-			g_counter.pre_count = g_counter.set_count;
+	//***************************************************************************************************************	
+	OS_ENTER_CRITICAL();//关中断<-------------------------- 2   
+	if (g_counter.system_status == RUNNING_OK){
+		if ((g_counter.rej_flag_buf.data.next_bottle != 0)){//如果这一瓶将要被剔除，那么没必要再数下去了，直接给装瓶信号，此刻振动器应该处于停止状态
+			if (g_counter.count.data.pre_count < g_counter.set_count){
+				g_counter.count.data.pre_count = g_counter.set_count;
+			}
+		}
+		if (g_counter.count.data.pre_count < g_counter.set_count){
+			UPDATE_ALL_CHANEL_STATUS(NORMAL_COUNT);//继续正常数粒
+			PRE_COUNT_FLAG = 1;
+			VIBRATE_SWITCH = VIB_START;
+		}else{//预数粒多数或者刚好数够
+			UPDATE_ALL_CHANEL_STATUS(SEPARATE_PRE_COUNT);//准备预数粒
+			SEND_COUNTER_FIN_SIGNAL (5000);//500ms
+			if (g_counter.count.data.pre_count < g_counter.set_pre_count){//达到设定的预数
+				VIBRATE_SWITCH = VIB_START;
+			}
 		}
 	}
 	OS_EXIT_CRITICAL();//开中断<-------------------------- 2
-	if (g_counter.pre_count < g_counter.set_count){
-		OS_ENTER_CRITICAL();//关中断<-------------------------- 3
-		g_counter.rej_flag_buf.data_hl >>= 16;
-		g_counter.normal_count = g_counter.pre_count;
-		g_counter.pre_count = 0;
-		UPDATE_ALL_CHANEL_STATUS(NORMAL_COUNT);
-		PRE_COUNT_FLAG = 1;
-		VIBRATE_SWITCH = 0;
-		OS_EXIT_CRITICAL();//开中断<-------------------------- 3
-	}else{//预数粒多数或者刚好数够
-		delay_ms (g_counter.set_vib_restart_delay);//延时一段时间再给信号
-		OS_ENTER_CRITICAL();//关中断<-------------------------- 4
-		g_counter.rej_flag_buf.data_hl >>= 16;
-		g_counter.normal_count = g_counter.pre_count;//这里的pre_count已经是数够了的
-		g_counter.pre_count = 0;
-		UPDATE_ALL_CHANEL_STATUS(SEPARATE_PRE_COUNT);
-		SEND_COUNTER_FIN_SIGNAL ();
-		g_counter.rej_flag_buf.data.l = 0;
-		if (g_counter.pre_count < g_counter.set_pre_count){//达到设定的预数
-			VIBRATE_SWITCH = 0;
-		}
-		OS_EXIT_CRITICAL();//开中断<-------------------------- 4
-	}
 }
 //
 void stop_vibrate (void)
 {
-	VIBRATE_SWITCH = 1;
+	VIBRATE_SWITCH = VIB_STOP;
 }
 //
 

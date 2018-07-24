@@ -59,6 +59,11 @@ u16 tim2_irq_process_time = 0;
 //
 #define CHECK_PIECE_IN_STATUS(CH) if (g_counter.ch[CH].piece_in == 1){ \
 	g_counter.ch[CH].piece_in_time++; \
+	if (g_counter.ch[CH].piece_in_time > 10000){ \
+		g_counter.system_status = DETECTOR_ERROR; \
+	} \
+}else{ \
+	g_counter.ch[CH].piece_in_time = 0; \
 }
 			
 
@@ -66,9 +71,6 @@ u16 tim2_irq_process_time = 0;
 uint32_t sys_run_time	= 0;//100us的精度
 void TIM2_IRQHandler(void)   //TIM2中断
 {
-#if OS_CRITICAL_METHOD == 3u                           /* Allocate storage for CPU status register     */
-    OS_CPU_SR  cpu_sr = 0u;
-#endif
 	unsigned long long tick_old;
 	tick_old = get_tim5_ticks();
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -90,13 +92,6 @@ void TIM2_IRQHandler(void)   //TIM2中断
 		CHECK_DOOR_CLOSE_FLAG (11);
 		if (g_counter.counter_fin_signal_delay > 0){
 			g_counter.counter_fin_signal_delay--;
-			if ((g_counter.rej_flag_buf.data.l & REJ_TOO_CLOSE) || 
-					(g_counter.rej_flag_buf.data.l & REJ_DOOR_SWITCH_TOO_FAST)){//这两种原因，再额外延时一段时间，等振动器停下来，再给完成信号
-				g_counter.counter_fin_signal_delay = 10000;//单位是 0.1ms
-				OS_ENTER_CRITICAL();//关中断<-------------------------- 1
-				g_counter.rej_flag_buf.data.l = 0;//可能会被更高级的中断打断，所以要先关中断
-				OS_EXIT_CRITICAL();//开中断<--------------------------- 1
-			}
 			if (g_counter.counter_fin_signal_delay == 0){//数粒完成信号
 				if (REJECT_FLAG == 0){
 					g_counter.total_reject++;
@@ -106,15 +101,15 @@ void TIM2_IRQHandler(void)   //TIM2中断
 				COUNTER_FINISH_OP ();
 			}
 		}
-		if (g_counter.rej_flag_clear_delay > 0){
-			g_counter.rej_flag_clear_delay--;
-			if (g_counter.rej_flag_clear_delay == 0){
-				if (g_counter.rej_flag_buf.data.l == 0){//如果当前没有剔除，则清零剔除原因
-					g_counter.rej_flag = 0;
-				}
-			}
-		}
-		
+//		if (g_counter.rej_flag_clear_delay > 0){
+//			g_counter.rej_flag_clear_delay--;
+//			if (g_counter.rej_flag_clear_delay == 0){
+//				if (g_counter.rej_flag_buf.data.current_bottle == 0){//如果当前没有剔除，则清零剔除原因
+//					g_counter.rej_flag = 0;
+//				}
+//			}
+//		}
+//		
 		CHECK_PIECE_IN_STATUS (0);
 		CHECK_PIECE_IN_STATUS (1);
 		CHECK_PIECE_IN_STATUS (2);
@@ -347,7 +342,7 @@ void TIM5_IRQHandler(void)   //TIM5中断
 //	dma_irq_cycle = tim5_dma_cur_cnt - tim5_dma_pre_cnt;
 //	tim5_dma_pre_cnt = tim5_dma_cur_cnt;
 //	if ((dma_irq_cycle > 400) && (process_rdy >= PROCESS_RDY)){
-//		counter_process_state = 0xE001;
+//		g_counter.system_status = 0xE001;
 //	}
 //}
 

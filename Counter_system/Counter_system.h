@@ -58,6 +58,8 @@
 	UPDATE_CHANEL_STATUS(9, STATUS); \
 	UPDATE_CHANEL_STATUS(10, STATUS); \
 	UPDATE_CHANEL_STATUS(11, STATUS); \
+	g_counter.rej_flag_buf.data_hl >>= 16; \
+	g_counter.count.data_hl >>= 16; \
 }
 
 #define SET_CHANEL_STATUS(CH,STATUS) { \
@@ -138,8 +140,7 @@
 	} \
 	/*判断是否小料门关闭时药粒间隔太小*/ \
 	if (_ch->close_door_interval.data_hl < g_counter.set_door_close_interval.data_hl){ \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_CLOSE; \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_CLOSE; \
+		g_counter.rej_flag_buf.data_hl |= (REJ_TOO_CLOSE | REJ_TOO_CLOSE << 16); \
 	} \
 }
 //
@@ -155,8 +156,7 @@
 	if (_ch->door_switch_interval.data_hl < g_counter.set_door_switch_interval){ \
 		/*开关频率太快，需额外加一段延时等待料门完全打开*/ \
 		_ch->door_close_delay += g_counter.set_door_close_ex_delay; \
-		g_counter.rej_flag_buf.data.h |= REJ_DOOR_SWITCH_TOO_FAST; \
-		g_counter.rej_flag_buf.data.l |= REJ_DOOR_SWITCH_TOO_FAST; \
+		g_counter.rej_flag_buf.data_hl |= (REJ_DOOR_SWITCH_TOO_FAST | REJ_DOOR_SWITCH_TOO_FAST << 16); \
 	} \
 }
 //
@@ -164,34 +164,34 @@
 
 #define CHECK_NORMAL_COUNT_LENGTH() { \
 	if (_ch->len.data_hl > g_counter.set_max_len.data_hl){ /*超过设定长度*/ \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_LONG; \
+		g_counter.rej_flag_buf.data.current_bottle |= REJ_TOO_LONG; \
 	}else if (_ch->len.data_hl < g_counter.set_min_len.data_hl){/*低于设定长度*/ \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_SHORT; \
+		g_counter.rej_flag_buf.data.current_bottle |= REJ_TOO_SHORT; \
 	} \
 }
 
 #define CHECK_NORMAL_COUNT_AREA() { \
 	if (_ch->area_sum.data_hl > g_counter.set_max_area_sum.data_hl){ /*超过设定面积*/ \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_BIG; \
+		g_counter.rej_flag_buf.data.current_bottle |= REJ_TOO_BIG; \
 	}else if (_ch->area_sum.data_hl < g_counter.set_min_area_sum.data_hl){/*低于设定面积*/ \
-		g_counter.rej_flag_buf.data.l |= REJ_TOO_SMALL; \
+		g_counter.rej_flag_buf.data.current_bottle |= REJ_TOO_SMALL; \
 	} \
 }
 
 
 #define CHECK_PRE_COUNT_LENGTH() { \
 	if (_ch->len.data_hl > g_counter.set_max_len.data_hl){ /*超过设定长度*/ \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_LONG; \
+		g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_LONG; \
 	}else if (_ch->len.data_hl < g_counter.set_min_len.data_hl){/*低于设定长度*/ \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_SHORT; \
+		g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_SHORT; \
 	} \
 }
 
 #define CHECK_PRE_COUNT_AREA() { \
 	if (_ch->area_sum.data_hl > g_counter.set_max_area_sum.data_hl){ /*超过设定面积*/ \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_BIG; \
+		g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_BIG; \
 	}else if (_ch->area_sum.data_hl < g_counter.set_min_area_sum.data_hl){/*低于设定面积*/ \
-		g_counter.rej_flag_buf.data.h |= REJ_TOO_SMALL; \
+		g_counter.rej_flag_buf.data.next_bottle |= REJ_TOO_SMALL; \
 	} \
 }
 //
@@ -230,13 +230,13 @@
 	g_counter.ch[CH].ad_min = 0xFFFF; \
 }
 
-#define SEND_COUNTER_FIN_SIGNAL() { \
-	if (g_counter.rej_flag_buf.data.l > 0){ \
+#define SEND_COUNTER_FIN_SIGNAL(TIME) { \
+	if (g_counter.rej_flag_buf.data.current_bottle > 0){ \
 		REJECT_FLAG = 0; \
-		g_counter.rej_flag = g_counter.rej_flag_buf.data.l; /*保存最后一次剔除原因*/ \
+		g_counter.rej_flag = g_counter.rej_flag_buf.data.current_bottle; /*保存最后一次剔除原因*/ \
 	} \
 	g_counter.counter_fin_signal_delay = ((g_counter.set_door_switch_interval > g_counter.set_door_close_interval.data_hl) ? \
-																				 g_counter.set_door_switch_interval : g_counter.set_door_close_interval.data_hl) + 200; \
+																				 g_counter.set_door_switch_interval : g_counter.set_door_close_interval.data_hl) + 200 + TIME; \
 }
 
 #define COUNTER_FINISH_OP() { \
@@ -259,6 +259,15 @@ enum COUNTER_STATE
 	NORMAL_COUNT,
 	SEPARATE_PRE_COUNT,
 	PRE_COUNT
+};
+
+enum SYSTEM_STATE
+{
+	RUNNING_OK = 0,
+	COUNTER_ERROR,
+	STATUS_ERROR,
+	ADC_TIME_ERROR,
+	DETECTOR_ERROR
 };
 
 typedef struct{
@@ -284,6 +293,24 @@ typedef union{
 		U16 h;
 	}data;
 }s_32;
+
+
+typedef union{
+	U32 data_hl;
+	struct{
+		U16 normal_count;
+		U16 pre_count;
+	}data;
+}s_ctr;
+
+
+typedef union{
+	U32 data_hl;
+	struct{
+		U16 current_bottle;
+		U16 next_bottle;
+	}data;
+}s_rej;
 
 typedef struct{
 	//s_chanel_pos pos[CHANEL_SENSOR_NUM];
@@ -367,7 +394,8 @@ typedef struct{
 	U16 last_piece_chanel_id;//最后一粒所在的通道号
 	U16 rej_flag;
 	U16 rej_flag_clear_delay;
-	s_32 rej_flag_buf;
+	s_ctr count;
+	s_rej rej_flag_buf;
 	s_32 total_count_sum;
 	s_32 area_sum;//截面积
 	s_32 min_area_sum;
@@ -388,7 +416,8 @@ typedef struct{
 	U16 sim_ad_value;
 	U16 sim_flag;
 	U16 set_door_n_close_delay[CHANEL_NUM];
-	U16 system_states;
+	U16 running_status;
+	U16 system_status;
 	U16 view_IR_DA_value[CHANEL_NUM];
 }s_counter_info;
 //

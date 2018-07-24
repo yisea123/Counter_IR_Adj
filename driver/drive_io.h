@@ -43,6 +43,10 @@
 #define PRE_COUNT_FLAG 	PFout(14)
 #define REJECT_FLAG 	PFout(15)
 
+
+#define VIB_START (0)
+#define VIB_STOP (1)
+
 #define IS_SYS_RUNNING ((VIBRATE_SWITCH == 0) || (PRE_COUNT_FLAG == 0))
 
 

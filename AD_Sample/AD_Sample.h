@@ -85,7 +85,6 @@ extern U16 ADC1_process_time;
 
 extern u16 dma_irq_cycle;
 extern u16 counter_process_time;
-extern int counter_process_state;
 
 extern U16 detect_chanel_index;//检测通道索引
 extern U16 chanel_pos_index;	//通道光敏二极管位置索引

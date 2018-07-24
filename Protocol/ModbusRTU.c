@@ -140,8 +140,8 @@ void Modbus_RegMap(void)
 
 	MAP_MODBUS_HOLDREG(20, chanel_pos_index);
 	MAP_MODBUS_HOLDREG(21, Modbus_com_error);
-	MAP_MODBUS_HOLDREG(22, g_counter.normal_count);
-	MAP_MODBUS_HOLDREG(23, g_counter.pre_count);
+	MAP_MODBUS_HOLDREG(22, g_counter.count.data.normal_count);
+	MAP_MODBUS_HOLDREG(23, g_counter.count.data.pre_count);
 	MAP_MODBUS_HOLDREG(24, g_counter.counter_step);
 	MAP_MODBUS_HOLDREG(25, g_counter.total_reject);
 	MAP_MODBUS_HOLDREG(26, my_env.print);
@@ -262,7 +262,7 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(506, g_counter.min_len.data.l);
 	MAP_MODBUS_HOLDREG(507, g_counter.min_interval.data.h);
 	MAP_MODBUS_HOLDREG(508, g_counter.min_interval.data.l);
-	MAP_MODBUS_HOLDREG(509, g_counter.system_states);//地址510
+	MAP_MODBUS_HOLDREG(509, g_counter.running_status);//地址510
 //
 	for (i = 0; i < 12; i++){
 		MAP_MODBUS_HOLDREG(512 + i, g_counter.set_door_n_close_delay[i]);
@@ -278,6 +278,7 @@ void Modbus_RegMap(void)
 	MAP_MODBUS_HOLDREG(540, g_counter.set_door_close_ex_delay);//小料门开关间隔关延时
 	MAP_MODBUS_HOLDREG(541, g_counter.set_vib_restart_delay);//重启振动器延时
 	MAP_MODBUS_HOLDREG(542, g_counter.set_pre_count_threshold);//预数粒过冲阈值
+	MAP_MODBUS_HOLDREG(543, g_counter.system_status);//数粒机状态
 	//
 	for (i = 0; i < 8; i++){
 		MAP_MODBUS_HOLDREG(1024 + i, AD_DMA_buf.AD_Value_0[i][0]);

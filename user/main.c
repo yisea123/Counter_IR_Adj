@@ -431,7 +431,7 @@ void io_task (void *pdata)
 			default:break;
 		}
 		
-		if (g_counter.system_states == 0){//停止状态下才可以手动
+		if (g_counter.running_status == 0){//停止状态下才可以手动
 			if (virtual_input[1] == 0){//重新调整
 				virtual_input[1] = 1;
 				re_calibration_detect();
@@ -474,16 +474,28 @@ void led1_task(void *pdata)
 			if ((process_rdy >= PROCESS_RDY)){
 				send_IR_value ();
 			}
-			if (counter_process_state == 0xE001){
-			//闪烁两次然后停1秒，采样处理超时
-				led_alarm (2, 100, 1000);
-			}else{
-			//闪烁两次然后停0秒，正常运行
-				led_alarm (1, 100, 0);
+			switch (g_counter.system_status)
+			{
+				case RUNNING_OK:
+					led_alarm (1, 100, 0);
+					break;
+				case COUNTER_ERROR:
+					led_alarm (2, 100, 1000);
+					break;
+				case STATUS_ERROR:
+					led_alarm (3, 100, 1000);
+					break;
+				case ADC_TIME_ERROR:
+					led_alarm (4, 100, 1000);
+					break;
+				case DETECTOR_ERROR:
+					led_alarm (5, 100, 1000);
+					break;
+				default:break;
 			}
 		}else{
 			//闪烁三次然后停2秒，提示未注册
-			led_alarm (3, 100, 1000);
+			led_alarm (3, 100, 2000);
 		}
 		Modbus_HoldReg_CPU_Usage = OSCPUUsage;
 	}

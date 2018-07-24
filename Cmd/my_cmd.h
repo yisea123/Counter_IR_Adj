@@ -100,6 +100,7 @@ typedef struct
 	vu32 ad_8804_cmd_timeout;
 	vu32 ad_8804_res_ok;
 	U32 is_registered;
+	uint32_t system_running_status;
 }s_system_env;
 
 typedef struct
